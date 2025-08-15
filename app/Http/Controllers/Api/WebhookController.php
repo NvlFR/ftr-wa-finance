@@ -28,6 +28,9 @@ class WebhookController extends Controller
 
             case 'lunas':
                 return $this->handleMarkAsPaid($phone, $message);
+            // case '/laporan':
+            //     return $this->handleReport($phone, $message);
+
 
             case '/bantuan':
             case '/help':
@@ -139,21 +142,99 @@ class WebhookController extends Controller
 
     private function showHelp()
     {
-        $reply = "🤖 *Bantuan Bot Keuangan* 🤖\n\n";
-        $reply .= "Berikut adalah format perintah yang tersedia:\n\n";
-        $reply .= "1️⃣ *Pencatatan Transaksi*\n";
-        $reply .= "`masuk [jumlah] [deskripsi] #[kategori]`\n";
-        $reply .= "`keluar [jumlah] [deskripsi] #[kategori]`\n";
-        $reply .= "_Contoh: keluar 25000 ngopi #jajan_\n\n";
-        $reply .= "2️⃣ *Pencatatan Hutang/Piutang*\n";
-        $reply .= "`hutang [jumlah] [nama] [deskripsi]`\n";
-        $reply .= "_Contoh: hutang 50000 Budi untuk makan_\n\n";
-        $reply .= "`piutang [jumlah] [nama] [deskripsi]`\n";
-        $reply .= "_Contoh: piutang 100000 Andi dipinjam_\n\n";
-        $reply .= "3️⃣ *Menandai Lunas*\n";
-        $reply .= "`lunas [jumlah] [nama]`\n";
-        $reply .= "_Contoh: lunas 50000 Budi_";
+    $reply = "🤖 *Bantuan Bot Keuangan* 🤖\n\n";
+    $reply .= "Berikut adalah format perintah yang tersedia:\n\n";
+    $reply .= "1️⃣ *Pencatatan Transaksi*\n";
+    $reply .= "`masuk [jumlah] [deskripsi] #[kategori]`\n";
+    $reply .= "`keluar [jumlah] [deskripsi] #[kategori]`\n\n";
 
-        return response()->json(['reply' => $reply]);
+    $reply .= "2️⃣ *Pencatatan Hutang/Piutang*\n";
+    $reply .= "`hutang [jumlah] [nama] [deskripsi]`\n";
+    $reply .= "`piutang [jumlah] [nama] [deskripsi]`\n";
+    $reply .= "`lunas [jumlah] [nama]`\n\n";
+
+    $reply .= "3️⃣ *Melihat Laporan* (Baru!)\n";
+    $reply .= "`/laporan` (Laporan hari ini)\n";
+    $reply .= "`/laporan minggu`\n";
+    $reply .= "`/laporan bulan`\n";
+    $reply .= "`/laporan bulan #makanan` (Filter per kategori)\n";
+
+    return response()->json(['reply' => $reply]);
     }
+    // Tambahkan metode baru ini di dalam class WebhookController
+
+private function handleReport($phone, $message)
+{
+    $parts = explode(' ', $message);
+    // Defaultnya adalah laporan 'hari ini' jika tidak ada parameter lain
+    $period = $parts[1] ?? 'hari';
+    $category = null;
+
+    // Cek apakah ada filter kategori, contoh: /laporan bulan #makanan
+    if (str_contains($message, '#')) {
+        $categoryParts = explode('#', $message, 2);
+        $category = trim($categoryParts[1]);
+        // Ambil periode dari bagian sebelum '#'
+        $periodParts = explode(' ', trim($categoryParts[0]));
+        $period = $periodParts[1] ?? 'bulan'; // Default ke bulan jika ada kategori
+    }
+
+    $query = Transaction::where('user_phone', $phone);
+
+    // Filter berdasarkan periode waktu
+    switch (strtolower($period)) {
+        case 'hari':
+        case 'today':
+            $query->whereDate('created_at', today());
+            $periodName = 'Hari Ini';
+            break;
+        case 'minggu':
+        case 'week':
+            $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+            $periodName = 'Minggu Ini';
+            break;
+        case 'bulan':
+        case 'month':
+            $query->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]);
+            $periodName = 'Bulan Ini';
+            break;
+        default:
+            return response()->json(['reply' => 'Periode tidak valid. Gunakan: hari, minggu, bulan.']);
+    }
+
+    // Filter berdasarkan kategori jika ada
+    if ($category) {
+        $query->where('category', $category);
+        $periodName .= " (Kategori: #{$category})";
+    }
+
+    // Ambil semua transaksi yang cocok
+    $transactions = $query->orderBy('created_at', 'desc')->get();
+
+    if ($transactions->isEmpty()) {
+        return response()->json(['reply' => "Tidak ada data transaksi untuk *{$periodName}*. 🤔"]);
+    }
+
+    // Hitung total
+    $totalPemasukan = $transactions->where('type', 'pemasukan')->sum('amount');
+    $totalPengeluaran = $transactions->where('type', 'pengeluaran')->sum('amount');
+    $selisih = $totalPemasukan - $totalPengeluaran;
+
+    // Format balasan
+    $reply = "📊 *Laporan Keuangan {$periodName}*\n\n";
+    $reply .= "💰 *Total Pemasukan:*\nRp " . number_format($totalPemasukan, 0, ',', '.') . "\n\n";
+    $reply .= "💸 *Total Pengeluaran:*\nRp " . number_format($totalPengeluaran, 0, ',', '.') . "\n\n";
+    $reply .= "⚖️ *Selisih (Cash Flow):*\nRp " . number_format($selisih, 0, ',', '.') . "\n";
+    $reply .= "-----------------------------------\n";
+    $reply .= "*5 Transaksi Terakhir:*\n";
+
+    // Tampilkan 5 transaksi terakhir dari periode tersebut
+    foreach ($transactions->take(5) as $trx) {
+        $emoji = $trx->type == 'pemasukan' ? '🟢' : '🔴';
+        $amountFormatted = number_format($trx->amount, 0, ',', '.');
+        $reply .= "{$emoji} Rp {$amountFormatted} - {$trx->description}\n";
+    }
+
+    return response()->json(['reply' => $reply]);
+}
 }
