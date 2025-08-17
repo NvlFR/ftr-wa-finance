@@ -34,4 +34,9 @@ class TransactionController extends Controller
 
         return redirect()->route('transactions.index')->with('success', 'Transaksi berhasil ditambahkan.');
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

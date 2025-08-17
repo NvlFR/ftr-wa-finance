@@ -1,164 +1,191 @@
 <script setup>
-import { ref } from "vue";
-import { Head, Link, router } from "@inertiajs/vue3";
+import { defineComponent, onMounted, ref, watch, computed } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
+import { useQuasar } from "quasar";
+import { usePageStorage } from "@/composables/usePageStorage";
 
-const leftDrawerOpen = ref(false);
+defineComponent({
+  name: "AuthenticatedLayout",
+});
 
-const toggleLeftDrawer = () => {
-    leftDrawerOpen.value = !leftDrawerOpen.value;
-};
+const storage = usePageStorage("auth-layout");
+const $q = useQuasar();
+const page = usePage();
 
-const logout = () => {
-    router.post(route("logout"));
-};
+const leftDrawerOpen = ref(storage.get("left-drawer-open", $q.screen.gt.sm));
+
+watch(leftDrawerOpen, (newValue) => {
+  storage.set("left-drawer-open", newValue);
+});
+
+onMounted(() => {
+  if ($q.screen.lt.md) {
+    leftDrawerOpen.value = false;
+  }
+});
 </script>
 
 <template>
-    <q-layout view="hHh LpR fFf">
-        <q-header elevated class="bg-primary text-white">
-            <q-toolbar>
-                <q-btn dense flat round icon="menu" @click="toggleLeftDrawer" />
-                <q-toolbar-title>
-                    <q-avatar>
-                        <img
-                            src="https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg"
-                        />
-                    </q-avatar>
-                    {{ $page.props.appName || "FinBot" }}
-                </q-toolbar-title>
+  <q-layout view="hHh LpR fFf" class="bg-grey-2">
+    <q-header elevated class="bg-white text-grey-8">
+      <q-toolbar>
+        <q-btn
+          dense
+          flat
+          round
+          icon="menu"
+          @click="leftDrawerOpen = !leftDrawerOpen"
+        />
 
-                <q-tabs shrink stretch>
-                    <q-route-tab to="/dashboard" label="Dashboard" />
-                    <q-route-tab to="/transactions" label="Transaksi" />
-                    <q-route-tab to="/investments" label="Investasi" />
-                    <q-route-tab to="/savings" label="Tabungan" />
-                    <q-route-tab to="/debts" label="Hutang" />
-                </q-tabs>
+        <q-toolbar-title>
+          <slot name="title">{{ page.props.appName }}</slot>
+        </q-toolbar-title>
 
-                <q-space />
+        <slot name="right-button"></slot>
+      </q-toolbar>
+      <slot name="header"></slot>
+    </q-header>
 
-                <q-btn-dropdown
-                    stretch
-                    flat
-                    :label="$page.props.auth.user.name"
-                >
-                    <q-list>
-                        <q-item
-                            :href="route('profile.edit')"
-                            clickable
-                            v-close-popup
-                            tabindex="0"
-                        >
-                            <q-item-section>
-                                <q-item-label>Profile</q-item-label>
-                            </q-item-section>
-                        </q-item>
-                        <q-separator />
-                        <q-item
-                            @click="logout"
-                            clickable
-                            v-close-popup
-                            tabindex="0"
-                        >
-                            <q-item-section>
-                                <q-item-label>Log Out</q-item-label>
-                            </q-item-section>
-                        </q-item>
-                    </q-list>
-                </q-btn-dropdown>
-            </q-toolbar>
-        </q-header>
+    <q-drawer v-model="leftDrawerOpen" show-if-above bordered :width="280">
+      <q-scroll-area class="fit">
+        <q-list>
+          <q-item class="q-py-md">
+            <q-item-section avatar>
+              <q-avatar color="primary" text-color="white" icon="person" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label class="text-bold">{{ page.props.auth.user.name }}</q-item-label>
+              <q-item-label caption>{{ page.props.auth.user.email }}</q-item-label>
+            </q-item-section>
+          </q-item>
 
-        <q-drawer show-if-above v-model="leftDrawerOpen" side="left" bordered>
-            <q-list>
-                <q-item-label header>Menu Navigasi</q-item-label>
-                <q-item
-                    clickable
-                    :href="route('dashboard')"
-                    :active="route().current('dashboard')"
-                >
-                    <q-item-section avatar
-                        ><q-icon name="dashboard"
-                    /></q-item-section>
-                    <q-item-section
-                        ><q-item-label>Dashboard</q-item-label></q-item-section
-                    >
-                </q-item>
-                <q-item
-                    clickable
-                    :href="route('transactions.index')"
-                    :active="route().current('transactions.index')"
-                >
-                    <q-item-section avatar
-                        ><q-icon name="receipt_long"
-                    /></q-item-section>
-                    <q-item-section
-                        ><q-item-label>Transaksi</q-item-label></q-item-section
-                    >
-                </q-item>
-                <q-item
-                    clickable
-                    :href="route('transactions.index')"
-                    :active="route().current('transactions.index')"
-                >
-                </q-item>
-                <q-item
-                    clickable
-                    :href="route('investments.index')"
-                    :active="route().current('investments.index')"
-                >
-                    <q-item-section avatar
-                        ><q-icon name="candlestick_chart"
-                    /></q-item-section>
-                    <q-item-section
-                        ><q-item-label>Investasi</q-item-label></q-item-section
-                    >
-                </q-item>
+          <q-separator />
 
-                <q-item
-                    clickable
-                    :href="route('investments.index')"
-                    :active="route().current('investments.index')"
-                >
-                </q-item>
-                <q-item
-                    clickable
-                    :href="route('savings.index')"
-                    :active="route().current('savings.index')"
-                >
-                    <q-item-section avatar
-                        ><q-icon name="savings"
-                    /></q-item-section>
-                    <q-item-section
-                        ><q-item-label>Tabungan</q-item-label></q-item-section
-                    >
-                </q-item>
+          <q-item
+            clickable
+            v-ripple
+            :active="route().current('dashboard')"
+            @click="router.get(route('dashboard'))"
+          >
+            <q-item-section avatar>
+              <q-icon name="dashboard" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>Dashboard</q-item-label>
+            </q-item-section>
+          </q-item>
 
-                <q-item
-                    clickable
-                    :href="route('savings.index')"
-                    :active="route().current('savings.index')"
-                >
-                </q-item>
-                <q-item
-                    clickable
-                    :href="route('debts.index')"
-                    :active="route().current('debts.index')"
-                >
-                    <q-item-section avatar
-                        ><q-icon name="sync_alt"
-                    /></q-item-section>
-                    <q-item-section
-                        ><q-item-label
-                            >Hutang & Piutang</q-item-label
-                        ></q-item-section
-                    >
-                </q-item>
-            </q-list>
-        </q-drawer>
+          <q-item
+            clickable
+            v-ripple
+            :active="route().current('transactions.index')"
+            @click="router.get(route('transactions.index'))"
+          >
+            <q-item-section avatar>
+              <q-icon name="request_quote" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>Transaksi</q-item-label>
+            </q-item-section>
+          </q-item>
 
-        <q-page-container>
-            <slot />
-        </q-page-container>
-    </q-layout>
+          <q-separator class="q-my-sm" />
+
+          <q-item
+            clickable
+            v-ripple
+            :active="route().current('investments.index')"
+            @click="router.get(route('investments.index'))"
+          >
+            <q-item-section avatar>
+              <q-icon name="trending_up" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>Investasi</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item
+            clickable
+            v-ripple
+            :active="route().current('savings.index')"
+            @click="router.get(route('savings.index'))"
+          >
+            <q-item-section avatar>
+              <q-icon name="savings" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>Tabungan</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item
+            clickable
+            v-ripple
+            :active="route().current('debts.index')"
+            @click="router.get(route('debts.index'))"
+          >
+            <q-item-section avatar>
+              <q-icon name="sync_alt" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>Hutang Piutang</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-separator class="q-my-sm" />
+
+          <q-item
+            clickable
+            v-ripple
+            :active="route().current('profile.edit')"
+            @click="router.get(route('profile.edit'))"
+          >
+            <q-item-section avatar>
+              <q-icon name="manage_accounts" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>Profil Saya</q-item-label>
+            </q-item-section>
+          </q-item>
+
+        </q-list>
+
+        <div class="absolute-bottom q-pa-md text-grey-6">
+            <q-separator class="q-mb-md" />
+             <q-item
+                clickable
+                v-ripple
+                @click="router.post(route('logout'))"
+              >
+                <q-item-section avatar>
+                  <q-icon name="logout" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Logout</q-item-label>
+                </q-item-section>
+              </q-item>
+          <div class="text-center q-mt-md">
+             &copy; 2025 - {{ page.props.appName }} v{{ page.props.appVersion }}
+          </div>
+        </div>
+      </q-scroll-area>
+    </q-drawer>
+
+    <q-page-container>
+      <q-page padding>
+        <slot></slot>
+      </q-page>
+    </q-page-container>
+
+    <slot name="footer"></slot>
+  </q-layout>
 </template>
+
+<style scoped>
+.q-item.q-router-link--active,
+.q-item--active {
+  background-color: #eef2ff;
+  color: #4f46e5;
+}
+</style>

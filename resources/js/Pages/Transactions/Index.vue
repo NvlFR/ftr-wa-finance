@@ -1,16 +1,43 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { useQuasar } from 'quasar';
 
 const props = defineProps({
-    transactions: Object, // Menerima data paginasi dari controller
+    transactions: Object,
 });
 
-const filter = ref(''); // Untuk fitur pencarian
+const $q = useQuasar();
+const showCreateModal = ref(false);
+const filter = ref('');
 
-// Mendefinisikan kolom untuk tabel Quasar
+// Inertia Form Helper
+const form = useForm({
+    type: 'pengeluaran',
+    amount: null,
+    description: '',
+    category: '',
+    created_at: new Date().toISOString().slice(0, 10), // Tanggal hari ini
+});
+
+const submit = () => {
+    form.post(route('transactions.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showCreateModal.value = false;
+            form.reset();
+            $q.notify({
+                color: 'positive',
+                message: 'Transaksi berhasil ditambahkan!',
+                icon: 'check_circle',
+            });
+        },
+    });
+};
+
 const columns = [
+    // ... (kolom yang sudah ada, tidak perlu diubah)
     { name: 'date', label: 'Tanggal', field: row => new Date(row.created_at).toLocaleDateString('id-ID'), align: 'left', sortable: true },
     { name: 'type', label: 'Tipe', field: 'type', align: 'left', sortable: true },
     { name: 'description', label: 'Deskripsi', field: 'description', align: 'left' },
@@ -36,16 +63,16 @@ const columns = [
                     row-key="id"
                     :filter="filter"
                 >
-                    <template v-slot:top-right>
+                    <template v-slot:top>
+                        <q-btn color="primary" icon="add" label="Tambah Transaksi" @click="showCreateModal = true" />
+                        <q-space />
                         <q-input borderless dense debounce="300" v-model="filter" placeholder="Cari...">
-                            <template v-slot:append>
-                                <q-icon name="search" />
-                            </template>
+                            <template v-slot:append><q-icon name="search" /></template>
                         </q-input>
                     </template>
 
                     <template v-slot:body-cell-type="props">
-                        <q-td :props="props">
+                         <q-td :props="props">
                             <q-badge :color="props.row.type === 'pemasukan' ? 'positive' : 'negative'" :label="props.row.type" />
                         </q-td>
                     </template>
@@ -63,8 +90,69 @@ const columns = [
                         />
                     </q-pagination>
                 </div>
-
             </q-card>
         </q-page>
     </AuthenticatedLayout>
+
+    <q-dialog v-model="showCreateModal">
+        <q-card style="width: 500px; max-width: 90vw;">
+            <q-card-section class="row items-center q-pb-none">
+                <div class="text-h6">Tambah Transaksi Baru</div>
+                <q-space />
+                <q-btn icon="close" flat round dense v-close-popup />
+            </q-card-section>
+
+            <q-form @submit.prevent="submit">
+                <q-card-section>
+                    <q-select
+                        filled
+                        v-model="form.type"
+                        :options="['pengeluaran', 'pemasukan']"
+                        label="Tipe Transaksi"
+                        :error="!!form.errors.type"
+                        :error-message="form.errors.type"
+                    />
+                    <q-input
+                        filled
+                        v-model.number="form.amount"
+                        type="number"
+                        label="Jumlah (Rp)"
+                        class="q-mt-md"
+                        :error="!!form.errors.amount"
+                        :error-message="form.errors.amount"
+                    />
+                    <q-input
+                        filled
+                        v-model="form.description"
+                        label="Deskripsi"
+                        class="q-mt-md"
+                        :error="!!form.errors.description"
+                        :error-message="form.errors.description"
+                    />
+                     <q-input
+                        filled
+                        v-model="form.category"
+                        label="Kategori (opsional)"
+                        class="q-mt-md"
+                        :error="!!form.errors.category"
+                        :error-message="form.errors.category"
+                    />
+                     <q-input filled v-model="form.created_at" mask="date" label="Tanggal" class="q-mt-md">
+                        <template v-slot:append>
+                            <q-icon name="event" class="cursor-pointer">
+                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                                <q-date v-model="form.created_at"></q-date>
+                            </q-popup-proxy>
+                            </q-icon>
+                        </template>
+                    </q-input>
+                </q-card-section>
+                <q-card-actions align="right">
+                    <q-btn label="Batal" color="grey-8" flat v-close-popup />
+                    <q-btn label="Simpan" type="submit" color="primary" :loading="form.processing" />
+                </q-card-actions>
+            </q-form>
+        </q-card>
+    </q-dialog>
+
 </template>

@@ -14,6 +14,13 @@
         @routes
         @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
         @inertiaHead
+
+        <script>
+        window.CONFIG = window.CONFIG || {};
+        window.CONFIG.APP_NAME = "{{ config('app.name', 'Laravel') }}";
+        window.CONFIG.APP_VERSION = {{ config('app.version', 0x010000) }};
+        window.CONFIG.APP_VERSION_STR = "{{ config('app.version_str', '1.0.0') }}";
+        </script>
     </head>
     <body class="font-sans antialiased">
         @inertia
