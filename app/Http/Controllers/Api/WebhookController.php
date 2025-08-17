@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use PDF;
 
 class WebhookController extends Controller
 {
@@ -91,48 +92,84 @@ switch ($structuredCommand['command']) {
 
 // Tambahkan 2 fungsi baru ini di dalam class WebhookController
 
-// Ganti fungsi handleExportData yang lama dengan yang ini
 
-// Ganti fungsi handleExportData yang lama dengan yang ini
+// Ganti seluruh fungsi handleExportData yang lama dengan versi final ini
 private function handleExportData($phone, $data)
 {
     $dataType = $data['jenis_data'] ?? 'transaksi';
     $period = $data['periode'] ?? 'bulan_ini';
+    $format = $data['format'] ?? 'xlsx';
 
-    $fileName = "export_{$dataType}_{$phone}_" . time() . '.xlsx';
+    $fileName = "export_{$dataType}_" . time() . ".{$format}";
     $filePath = "exports/{$fileName}";
+    $userFriendlyFileName = "Laporan " . ucfirst($dataType) . ".{$format}";
+    $caption = "Ini dia laporan {$dataType} Anda.";
 
-    // Nama file yang lebih ramah untuk pengguna
-    $userFriendlyFileName = "Laporan " . ucfirst($dataType) . ".xlsx";
+    $exportClass = null;
+    $pdfView = null;
+    $pdfData = [];
 
+    // --- Menyiapkan data dan template berdasarkan jenis data ---
     switch ($dataType) {
         case 'transaksi':
-            Excel::store(new TransactionsExport($phone, $period), $filePath, 'public');
+            $exportClass = new TransactionsExport($phone, $period);
+            $pdfView = 'reports.financial_report';
+            $transactions = $exportClass->collection();
+            if ($transactions->isEmpty()) return response()->json(['reply' => "Tidak ada data transaksi untuk diekspor."]);
+            $summary = ['pemasukan' => $transactions->where('type', 'pemasukan')->sum('amount'), 'pengeluaran' => $transactions->where('type', 'pengeluaran')->sum('amount')];
+            $summary['selisih'] = $summary['pemasukan'] - $summary['pengeluaran'];
+            $pdfData = ['periodName' => 'Laporan Transaksi', 'summary' => $summary, 'transactions' => $transactions];
             break;
 
         case 'investasi':
-            Excel::store(new InvestmentsExport($phone, $period), $filePath, 'public');
+            $exportClass = new InvestmentsExport($phone, $period);
+            $pdfView = 'reports.investments_report';
+            $portfolio = $exportClass->collection()->groupBy('asset_name')->map(function ($group) {
+                return (object) [
+                    'asset_name' => $group->first()->asset_name,
+                    'asset_type' => $group->first()->asset_type,
+                    'total_quantity' => $group->sum(fn($item) => $item->type == 'beli' ? $item->quantity : -$item->quantity),
+                    'total_capital' => $group->sum(fn($item) => $item->type == 'beli' ? $item->total_amount : -$item->total_amount),
+                ];
+            })->filter(fn($asset) => $asset->total_quantity > 0.00000001);
+            if ($portfolio->isEmpty()) return response()->json(['reply' => "Tidak ada data investasi untuk diekspor."]);
+            $pdfData = ['portfolio' => $portfolio];
             break;
 
         case 'hutang':
-            // Ekspor hutang tidak memerlukan periode
-            Excel::store(new DebtsExport($phone), $filePath, 'public');
+            $exportClass = new DebtsExport($phone);
+            $pdfView = 'reports.debts_report';
+            $debts = $exportClass->collection();
+            if ($debts->isEmpty()) return response()->json(['reply' => "Tidak ada data hutang/piutang untuk diekspor."]);
+            $pdfData = ['piutang' => $debts->where('type', 'piutang'), 'hutang' => $debts->where('type', 'hutang')];
             break;
+
         case 'tabungan':
-            Excel::store(new SavingsExport($phone), $filePath, 'public');
+            $exportClass = new SavingsExport($phone);
+            $pdfView = 'reports.savings_report';
+            $savings = $exportClass->collection();
+            if ($savings->isEmpty()) return response()->json(['reply' => "Tidak ada data tabungan untuk diekspor."]);
+            $pdfData = ['savings' => $savings];
             break;
 
         default:
             return response()->json(['reply' => "Maaf, ekspor untuk data '{$dataType}' belum didukung."]);
     }
 
+    // --- Membuat file berdasarkan format ---
+    if ($format === 'pdf') {
+        $pdf = PDF::loadView($pdfView, $pdfData);
+        Storage::disk('public')->put($filePath, $pdf->output());
+    } else { // Default ke XLSX
+        Excel::store($exportClass, $filePath, 'public');
+    }
+
     $fileUrl = Storage::disk('public')->url($filePath);
+    $mimetype = $format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
     return response()->json([
-        'type' => 'file',
-        'url' => url($fileUrl),
-        'fileName' => $userFriendlyFileName,
-        'caption' => "Ini dia laporan {$dataType} Anda."
+        'type' => 'file', 'url' => url($fileUrl),
+        'fileName' => $userFriendlyFileName, 'mimetype' => $mimetype, 'caption' => $caption
     ]);
 }
 // /**
@@ -553,8 +590,8 @@ Berikut adalah format JSON yang harus Anda gunakan:
 15. **Bantuan:** {"command":"bantuan"}
 16. **Info Kurang:** {"command":"minta_info_tambahan", "data":{"pertanyaan":"_pertanyaan_untuk_pengguna_"}}
 17. **Error:** {"error":"Maaf, saya kurang paham."}
-18. Untuk mengekspor data ke format teks CSV:
-{"command":"export_data", "data":{"jenis_data":"transaksi" atau "investasi" atau "hutang", "periode":"bulan_ini" atau "tahun_ini" atau "semua"}}
+18. Untuk mengekspor data:
+{"command":"export_data", "data":{"jenis_data":"transaksi" atau "investasi" dll, "periode":"bulan_ini" dll, "format":"xlsx" atau "pdf"}}
 
 
 Contoh-contoh Penting:
@@ -590,6 +627,9 @@ Output: {"command":"export_data", "data":{"jenis_data":"transaksi", "periode":"b
 
 User: kirim semua data investasiku
 Output: {"command":"export_data", "data":{"jenis_data":"investasi", "periode":"semua"}}
+
+User: export laporan transaksi bulan ini ke pdf
+Output: {"command":"export_data", "data":{"jenis_data":"transaksi", "periode":"bulan_ini", "format":"pdf"}}
 PROMPT;
 
         try {
