@@ -119,19 +119,59 @@ onMounted(() => {
             </q-item-section>
           </q-item>
 
-          <q-item
-            clickable
-            v-ripple
-            :active="route().current('debts.index')"
-            @click="router.get(route('debts.index'))"
+                    <q-expansion-item
+            icon="sync_alt"
+            label="Hutang & Piutang"
+            :default-opened="
+              $page.url.startsWith('/debts/index')
+            "
           >
-            <q-item-section avatar>
-              <q-icon name="sync_alt" />
-            </q-item-section>
-            <q-item-section>
-              <q-item-label>Hutang Piutang</q-item-label>
-            </q-item-section>
-          </q-item>
+            <q-item
+              class="subnav"
+              clickable
+              v-ripple
+              :active="$page.url.startsWith('/debts/index')"
+              @click="router.get(route('debts.index'))"
+            >
+              <q-item-section avatar>
+                <q-icon name="receipt_long" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Daftar Transaksi</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item
+              class="subnav"
+              clickable
+              v-ripple
+              :active="$page.url.startsWith('/parties/index')"
+              @click="router.get(route('parties.index'))"
+            >
+              <q-item-section avatar>
+                <q-icon name="groups" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Daftar Pihak</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-expansion-item>
+
+
+
+          <!-- <q-expansion-item
+        icon="sync_alt"
+        label="Hutang & Piutang"
+        :content-inset-level="0.5"
+    >
+        <q-item clickable :href="route('debts.index')" :active="route().current('debts.index')">
+            <q-item-section avatar><q-icon name="receipt_long" /></q-item-section>
+            <q-item-section><q-item-label>Daftar Transaksi</q-item-label></q-item-section>
+        </q-item>
+        <q-item clickable :href="route('parties.index')" :active="route().current('parties.index')">
+            <q-item-section avatar><q-icon name="groups" /></q-item-section>
+            <q-item-section><q-item-label>Daftar Pihak</q-item-label></q-item-section>
+        </q-item>
+    </q-expansion-item> -->
 
           <q-separator class="q-my-sm" />
 

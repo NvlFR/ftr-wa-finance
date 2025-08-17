@@ -46,18 +46,25 @@ class User extends Authenticatable
         ];
     }
 
-        public function transactions()
+    public function transactions()
     {
         return $this->hasMany(Transaction::class);
     }
 
     public function investmentTransactions()
-{
-    return $this->hasMany(InvestmentTransaction::class);
-}
+    {
+        return $this->hasMany(InvestmentTransaction::class);
+    }
 
-public function savings()
-{
-    return $this->hasMany(Saving::class);
-}
+    public function savings()
+    {
+        return $this->hasMany(Saving::class);
+    }
+
+    public function debts()
+    {
+        return $this->hasMany(Debt::class);
+    }
+
+    public function parties() { return $this->hasMany(Party::class); }
 }

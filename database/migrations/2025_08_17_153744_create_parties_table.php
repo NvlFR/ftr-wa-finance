@@ -11,10 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('parties', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
+ Schema::create('parties', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('user_id')->constrained()->onDelete('cascade');
+        $table->string('name');
+        $table->string('type')->default('Perorangan');
+        $table->text('notes')->nullable();
+        $table->timestamps();
+    });
     }
 
     /**

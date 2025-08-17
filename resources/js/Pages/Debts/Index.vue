@@ -1,28 +1,42 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import Pagination from "@/Components/Pagination.vue";
+import { Head, Link } from "@inertiajs/vue3";
+import { useFormatter } from "@/Composables/useFormatter";
 
 const props = defineProps({
-    receivables: Array, // Piutang
-    payables: Array,    // Hutang
+    debts: Object, // Di controller, ini berisi semua data paginasi
 });
 
-const formatCurrency = (value) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(value);
-};
+const { formatCurrency } = useFormatter();
 
-// Kolom untuk tabel piutang
-const receivablesColumns = [
-    { name: 'person_name', label: 'Nama Orang', field: 'person_name', align: 'left' },
-    { name: 'description', label: 'Deskripsi', field: 'description', align: 'left' },
-    { name: 'amount', label: 'Jumlah', field: 'amount', align: 'right', format: val => formatCurrency(val) },
-];
+// Memisahkan data dari paginator untuk ditampilkan
+const receivables = props.debts.data.filter((d) => d.type === "piutang");
+const payables = props.debts.data.filter((d) => d.type === "hutang");
 
-// Kolom untuk tabel hutang
-const payablesColumns = [
-    { name: 'person_name', label: 'Kepada', field: 'person_name', align: 'left' },
-    { name: 'description', label: 'Deskripsi', field: 'description', align: 'left' },
-    { name: 'amount', label: 'Jumlah', field: 'amount', align: 'right', format: val => formatCurrency(val) },
+const columns = [
+    {
+        name: "party",
+        label: "Pihak",
+        field: (row) => (row.party ? row.party.name : "[Pihak Dihapus]"),
+        align: "left",
+        sortable: true,
+    },
+    {
+        name: "description",
+        label: "Deskripsi",
+        field: "description",
+        align: "left",
+    },
+    {
+        name: "amount",
+        label: "Jumlah",
+        field: "amount",
+        align: "right",
+        sortable: true,
+        format: (val) => formatCurrency(val),
+    },
+    // Aksi bisa ditambahkan di sini nanti (Edit, Lunas, Hapus)
 ];
 </script>
 
@@ -31,51 +45,45 @@ const payablesColumns = [
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Hutang & Piutang</h2>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                Hutang & Piutang
+            </h2>
         </template>
 
         <q-page class="q-pa-md">
+            <div class="q-mb-md">
+                <Link :href="route('debts.create')">
+                    <q-btn
+                        color="primary"
+                        icon="add"
+                        label="Catat Hutang/Piutang"
+                    />
+                </Link>
+            </div>
+
             <div class="row q-col-gutter-md">
                 <div class="col-12 col-md-6">
                     <q-table
                         title="Piutang (Uang Anda di Luar)"
                         :rows="receivables"
-                        :columns="receivablesColumns"
+                        :columns="columns"
                         row-key="id"
                         flat
                         bordered
-                    >
-                       <template v-slot:no-data>
-                           <div class="full-width row flex-center text-positive q-gutter-sm">
-                               <q-icon size="2em" name="check_circle" />
-                               <span>
-                                   Bagus! Tidak ada yang berhutang kepada Anda.
-                               </span>
-                           </div>
-                       </template>
-                    </q-table>
+                    />
                 </div>
-
                 <div class="col-12 col-md-6">
                     <q-table
                         title="Hutang (Kewajiban Anda)"
                         :rows="payables"
-                        :columns="payablesColumns"
+                        :columns="columns"
                         row-key="id"
                         flat
                         bordered
-                    >
-                        <template v-slot:no-data>
-                           <div class="full-width row flex-center text-positive q-gutter-sm">
-                               <q-icon size="2em" name="check_circle" />
-                               <span>
-                                   Luar biasa! Anda tidak memiliki hutang.
-                               </span>
-                           </div>
-                       </template>
-                    </q-table>
+                    />
                 </div>
             </div>
+            <Pagination :links="debts.links" />
         </q-page>
     </AuthenticatedLayout>
 </template>

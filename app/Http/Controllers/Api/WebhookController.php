@@ -705,13 +705,25 @@ private function handleInvestmentFromAI($phone, $data)
 
     private function handleDebtFromAI($phone, $data)
     {
-        Debt::create([
-            'user_phone' => $phone,
-            'type' => $data['type'],
-            'person_name' => $data['person_name'],
-            'amount' => $data['amount'],
-            'description' => $data['description'],
-        ]);
+    $user = \App\Models\User::first(); // Asumsi sederhana, ambil user pertama
+    if (!$user) {
+        return response()->json(['reply' => 'Tidak ada user terdaftar di sistem.']);
+    }
+
+    // Cari pihak berdasarkan nama, atau buat baru jika tidak ada
+    $party = $user->parties()->firstOrCreate(
+        ['name' => $data['person_name']],
+        ['type' => 'Perorangan'] // Default tipe jika membuat baru
+    );
+
+    // Sekarang catat hutang menggunakan party_id
+    Debt::create([
+        'user_id' => $user->id,
+        'party_id' => $party->id,
+        'type' => $data['type'],
+        'amount' => $data['amount'],
+        'description' => $data['description'],
+    ]);
 
         $formattedAmount = number_format($data['amount'], 0, ',', '.');
         $action = $data['type'] === 'hutang' ? 'berhutang' : 'memberi piutang';

@@ -6,6 +6,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\InvestmentController;
 use App\Http\Controllers\SavingController;
 use App\Http\Controllers\DebtController;
+use App\Http\Controllers\PartyController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -22,33 +23,31 @@ Route::get('/', function () {
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
-Route::middleware('auth')->group(function () {
+
+// --- GRUP UTAMA UNTUK FITUR-FITUR APLIKASI ---
+Route::middleware('auth', 'verified')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Rute untuk Transaksi
+    Route::resource('transactions', TransactionController::class)
+        ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
 
-Route::resource('transactions', TransactionController::class)
-    ->only(['index', 'create', 'store', 'edit', 'update', 'destroy', 'show'])
-    ->middleware(['auth', 'verified']);
-Route::resource('investments', InvestmentController::class)
-    ->except(['show', 'edit', 'update', 'destroy', 'show', ]) // Definisikan semua kecuali yang custom
-    ->middleware(['auth', 'verified']);
+    // Rute untuk Investasi
+    Route::resource('investments', InvestmentController::class)
+        ->except(['show']); // 'show' kita definisikan secara custom
+    Route::get('/investments/{assetName}', [InvestmentController::class, 'show'])->name('investments.show');
 
-// Rute custom untuk halaman detail
-Route::get('/investments/{assetName}', [InvestmentController::class, 'show'])
-    ->middleware(['auth', 'verified'])
-    ->name('investments.show');
+    // Rute untuk Tabungan
+    Route::resource('savings', SavingController::class)
+        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy', 'show']);
+    Route::post('/savings/{saving}/add-funds', [SavingController::class, 'addFunds'])->name('savings.addFunds');
 
-Route::resource('savings', SavingController::class)
-    ->only(['index', 'create', 'store', 'edit', 'update', 'destroy', 'show'])
-    ->middleware(['auth', 'verified']);
-
-Route::post('/savings/{saving}/add-funds', [SavingController::class, 'addFunds'])
-    ->middleware(['auth', 'verified'])
-    ->name('savings.addFunds');
-
-    Route::get('/debts', [DebtController::class, 'index'])->name('debts.index');
+    // --- RUTE BARU & PEMBARUAN DI SINI ---
+    Route::resource('parties', PartyController::class);
+    Route::resource('debts', DebtController::class);
 });
+
 
 require __DIR__.'/auth.php';
