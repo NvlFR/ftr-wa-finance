@@ -67,7 +67,7 @@ public function getPortfolioSummary($userId)
     // Filter aset yang sudah dijual habis
     return $assets->filter(function ($asset) {
         return $asset->total_quantity > 0.00000001; // Toleransi untuk angka desimal
-    });
+    })->values();
 }
 
 // app/Traits/FinancialSummaryTrait.php

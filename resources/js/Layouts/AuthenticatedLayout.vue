@@ -2,7 +2,7 @@
 import { defineComponent, onMounted, ref, watch, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { useQuasar } from "quasar";
-import { usePageStorage } from "@/composables/usePageStorage";
+import { usePageStorage } from "@/Composables/usePageStorage";
 
 defineComponent({
   name: "AuthenticatedLayout",

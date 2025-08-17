@@ -28,17 +28,25 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
 
-    Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
-    Route::post('/transactions', [TransactionController::class, 'store'])->name('transactions.store');
+Route::resource('transactions', TransactionController::class)
+    ->only(['index', 'create', 'store', 'edit', 'update', 'destroy', 'show'])
+    ->middleware(['auth', 'verified']);
+Route::resource('investments', InvestmentController::class)
+    ->except(['show', 'edit', 'update', 'destroy', 'show', ]) // Definisikan semua kecuali yang custom
+    ->middleware(['auth', 'verified']);
 
+// Rute custom untuk halaman detail
+Route::get('/investments/{assetName}', [InvestmentController::class, 'show'])
+    ->middleware(['auth', 'verified'])
+    ->name('investments.show');
 
+Route::resource('savings', SavingController::class)
+    ->only(['index', 'create', 'store', 'edit', 'update', 'destroy', 'show'])
+    ->middleware(['auth', 'verified']);
 
-
-    Route::get('/investments', [InvestmentController::class, 'index'])->name('investments.index');
-
-
-    Route::get('/savings', [SavingController::class, 'index'])->name('savings.index');
-
+Route::post('/savings/{saving}/add-funds', [SavingController::class, 'addFunds'])
+    ->middleware(['auth', 'verified'])
+    ->name('savings.addFunds');
 
     Route::get('/debts', [DebtController::class, 'index'])->name('debts.index');
 });

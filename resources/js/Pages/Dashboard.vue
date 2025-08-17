@@ -2,22 +2,13 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";
 import { computed } from "vue";
-
-// Menerima data 'summary' yang dikirim dari DashboardController
+import { useFormatter } from '@/Composables/useFormatter'
 const props = defineProps({
     summary: Object,
 });
 
-// Fungsi untuk memformat angka menjadi format Rupiah
-const formatCurrency = (value) => {
-    return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-    }).format(value);
-};
+const { formatCurrency } = useFormatter(); 
 
-// Menghitung persentase pengeluaran terhadap pemasukan
 const expensePercentage = computed(() => {
     if (props.summary.monthly_income === 0) {
         return 0;
