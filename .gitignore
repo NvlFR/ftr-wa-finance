@@ -24,3 +24,5 @@ Homestead.yaml
 Thumbs.db
 # Ignore node_modules inside the WhatsApp connector directory
 /wa-connector/node_modules
+/wa-connector/auth_info_baileys
+

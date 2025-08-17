@@ -10,6 +10,9 @@ use App\Models\Saving;
 use App\Models\Budget;
 use App\Models\InvestmentTransaction;
 use Illuminate\Http\Request;
+use App\Exports\TransactionsExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -30,60 +33,140 @@ class WebhookController extends Controller
             return response()->json(['reply' => "Maaf, terjadi sedikit kebingungan. Coba lagi ya."]);
         }
 
-        switch ($structuredCommand['command']) {
-            case 'catat_transaksi':
-                return $this->handleTransactionFromAI($phone, $structuredCommand['data']);
-            case 'catat_hutang_piutang':
-                return $this->handleDebtFromAI($phone, $structuredCommand['data']);
-            case 'tandai_lunas':
-                return $this->handleMarkAsPaidFromAI($phone, $structuredCommand['data']);
-            case 'laporan_keuangan':
-                return $this->handleReportFromAI($phone, $message);
-            case 'catat_investasi':
-                return $this->handleInvestmentFromAI($phone, $structuredCommand['data']);
-            case 'lihat_portfolio':
-                return $this->handlePortfolio($phone);
-            case 'buat_tabungan':
-                return $this->handleCreateSavingGoal($phone, $structuredCommand['data']);
-            case 'tambah_tabungan':
-                return $this->handleAddToSaving($phone, $structuredCommand['data']);
-            case 'lihat_tabungan':
-                return $this->handleShowSavings($phone);
-            case 'buat_dana_darurat':
-                return $this->handleCreateEmergencyFund($phone, $structuredCommand['data']);
-            case 'tambah_dana_darurat':
-                return $this->handleAddToEmergencyFund($phone, $structuredCommand['data']);
-            case 'pakai_dana_darurat':
-                return $this->handleUseEmergencyFund($phone, $structuredCommand['data']);
-            case 'lihat_dana_darurat':
-                return $this->handleShowEmergencyFund($phone);
-            case 'bantuan':
-                return $this->showHelp();
-            case 'set_budget':
-                return $this->handleSetBudget($phone, $structuredCommand['data']);
-            case 'lihat_budget':
-                return $this->handleShowBudget($phone);
-            case 'buat_transaksi_berulang':
-                return $this->handleCreateRecurring($phone, $structuredCommand['data']);
-            case 'lihat_transaksi_berulang':
-                return $this->handleShowRecurring($phone);
-            case 'hapus_transaksi_berulang':
-                return $this->handleDeleteRecurring($phone, $structuredCommand['data']);
+switch ($structuredCommand['command']) {
+    // === Perintah Pencatatan Data ===
+    case 'catat_transaksi':
+        return $this->handleTransactionFromAI($phone, $structuredCommand['data']);
+    case 'catat_hutang_piutang':
+        return $this->handleDebtFromAI($phone, $structuredCommand['data']);
+    case 'tandai_lunas':
+        return $this->handleMarkAsPaidFromAI($phone, $structuredCommand['data']);
+    case 'catat_investasi':
+        return $this->handleInvestmentFromAI($phone, $structuredCommand['data']);
+    case 'buat_tabungan':
+        return $this->handleCreateSavingGoal($phone, $structuredCommand['data']);
+    case 'tambah_tabungan':
+        return $this->handleAddToSaving($phone, $structuredCommand['data']);
+    case 'buat_dana_darurat':
+        return $this->handleCreateEmergencyFund($phone, $structuredCommand['data']);
+    case 'tambah_dana_darurat':
+        return $this->handleAddToEmergencyFund($phone, $structuredCommand['data']);
+    case 'pakai_dana_darurat':
+        return $this->handleUseEmergencyFund($phone, $structuredCommand['data']);
+    case 'set_budget':
+        return $this->handleSetBudget($phone, $structuredCommand['data']);
+    case 'buat_transaksi_berulang':
+        return $this->handleCreateRecurring($phone, $structuredCommand['data']);
+    case 'hapus_transaksi_berulang':
+        return $this->handleDeleteRecurring($phone, $structuredCommand['data']);
+     case 'export_data':
+        return $this->handleExportData($phone, $structuredCommand['data']);
 
-            // --- INI BAGIAN BARU YANG PENTING ---
-            case 'minta_info_tambahan':
-                // Jika AI butuh info lebih, kita kirim pertanyaannya ke pengguna
-                return response()->json(['reply' => $structuredCommand['data']['pertanyaan']]);
+    // === Perintah untuk Melihat Data & Laporan ===
+    case 'lihat_transaksi_berulang':
+        return $this->handleShowRecurring($phone);
 
-            default:
-                return response()->json(['reply' => "Maaf, saya tidak mengerti maksud Anda. Coba katakan dengan cara lain atau ketik /bantuan."]);
-        }
+    case 'lihat_laporan':
+        // SATU FUNGSI UTAMA UNTUK SEMUA JENIS LAPORAN
+        return $this->handleShowReport($phone, $structuredCommand['data']);
+
+    // === Perintah Bantuan & Interaksi Lainnya ===
+    case 'bantuan':
+        return $this->showHelp();
+    case 'minta_info_tambahan':
+        return response()->json(['reply' => $structuredCommand['data']['pertanyaan']]);
+
+    default:
+        return response()->json(['reply' => "Maaf, saya tidak mengerti maksud Anda. Coba katakan dengan cara lain atau ketik /bantuan."]);
+}
     }
 
     // Tambahkan fungsi baru ini di dalam class WebhookController
 // Tambahkan 4 fungsi baru ini di dalam class WebhookController
 // Tambahkan 2 fungsi baru ini di dalam class WebhookController
 // Tambahkan 3 fungsi baru ini di dalam class WebhookController
+
+// Tambahkan 2 fungsi baru ini di dalam class WebhookController
+
+// Ganti fungsi handleExportData yang lama dengan yang ini
+
+private function handleExportData($phone, $data)
+{
+    $dataType = $data['jenis_data'] ?? 'transaksi';
+    $period = $data['periode'] ?? 'bulan_ini';
+
+    $fileName = "export_{$dataType}_{$phone}_" . time() . '.xlsx';
+    $filePath = "exports/{$fileName}"; // Path di dalam disk 'public'
+
+    switch ($dataType) {
+        case 'transaksi':
+            // Secara eksplisit menyimpan file ke disk 'public'
+            Excel::store(new TransactionsExport($phone, $period), $filePath, 'public');
+            break;
+        default:
+            return response()->json(['reply' => "Maaf, ekspor untuk data '{$dataType}' belum didukung."]);
+    }
+
+    // Secara eksplisit meminta URL dari disk 'public'
+    $fileUrl = Storage::disk('public')->url($filePath);
+
+    return response()->json([
+        'type' => 'file',
+        'url' => url($fileUrl), // Pastikan menggunakan full URL
+        'fileName' => "Laporan Keuangan.xlsx", // Beri nama file yang lebih ramah
+        'caption' => "Ini dia laporan {$dataType} Anda."
+    ]);
+}
+// /**
+//  * Menghasilkan string CSV untuk data transaksi.
+//  */
+// private function generateTransactionsCSV($phone, $period)
+// {
+//     $query = Transaction::where('user_phone', $phone);
+
+//     switch ($period) {
+//         case 'bulan_ini':
+//             $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
+//             break;
+//         case 'tahun_ini':
+//             $query->whereYear('created_at', now()->year);
+//             break;
+//         case 'semua':
+//             // Tidak perlu filter tambahan
+//             break;
+//         default:
+//             // Default ke bulan ini jika periode tidak dikenal
+//             $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
+//             break;
+//     }
+
+//     $transactions = $query->orderBy('created_at', 'asc')->get();
+
+//     if ($transactions->isEmpty()) {
+//         return "";
+//     }
+
+//     // Header CSV
+//     $csvHeader = ['Tanggal', 'Tipe', 'Jumlah', 'Deskripsi', 'Kategori'];
+//     $csvRows = [implode(',', $csvHeader)];
+
+//     // Baris data
+//     foreach ($transactions as $trx) {
+//         $row = [
+//             $trx->created_at->format('Y-m-d'),
+//             $trx->type,
+//             $trx->amount,
+//             // Mengganti koma di deskripsi agar tidak merusak format CSV
+//             str_replace(',', ';', $trx->description),
+//             $trx->category,
+//         ];
+//         $csvRows[] = implode(',', $row);
+//     }
+
+//     return implode("\n", $csvRows);
+// }
+
+
 
 private function handleCreateRecurring($phone, $data)
 {
@@ -159,45 +242,45 @@ private function handleSetBudget($phone, $data)
     return response()->json(['reply' => $naturalReply]);
 }
 
-private function handleShowBudget($phone)
-{
-    $currentMonth = now()->month;
-    $currentYear = now()->year;
+// private function handleShowBudget($phone)
+// {
+//     $currentMonth = now()->month;
+//     $currentYear = now()->year;
 
-    $budgets = Budget::where('user_phone', $phone)
-        ->where('month', $currentMonth)
-        ->where('year', $currentYear)
-        ->get();
+//     $budgets = Budget::where('user_phone', $phone)
+//         ->where('month', $currentMonth)
+//         ->where('year', $currentYear)
+//         ->get();
 
-    if ($budgets->isEmpty()) {
-        return response()->json(['reply' => "Anda belum mengatur budget untuk bulan ini. Coba atur dengan perintah 'set budget ...'"]);
-    }
+//     if ($budgets->isEmpty()) {
+//         return response()->json(['reply' => "Anda belum mengatur budget untuk bulan ini. Coba atur dengan perintah 'set budget ...'"]);
+//     }
 
-    // Ambil total pengeluaran per kategori untuk bulan ini
-    $spendings = Transaction::where('user_phone', $phone)
-        ->where('type', 'pengeluaran')
-        ->whereMonth('created_at', $currentMonth)
-        ->whereYear('created_at', $currentYear)
-        ->select('category', DB::raw('SUM(amount) as total_spent'))
-        ->groupBy('category')
-        ->pluck('total_spent', 'category');
+//     // Ambil total pengeluaran per kategori untuk bulan ini
+//     $spendings = Transaction::where('user_phone', $phone)
+//         ->where('type', 'pengeluaran')
+//         ->whereMonth('created_at', $currentMonth)
+//         ->whereYear('created_at', $currentYear)
+//         ->select('category', DB::raw('SUM(amount) as total_spent'))
+//         ->groupBy('category')
+//         ->pluck('total_spent', 'category');
 
-    $reply = "📊 *Ringkasan Budget Bulan " . now()->translatedFormat('F Y') . "*\n\n";
+//     $reply = "📊 *Ringkasan Budget Bulan " . now()->translatedFormat('F Y') . "*\n\n";
 
-    foreach ($budgets as $budget) {
-        $spent = $spendings[strtolower($budget->category)] ?? 0;
-        $remaining = $budget->amount - $spent;
-        $percentage = $budget->amount > 0 ? ($spent / $budget->amount) * 100 : 0;
-        $statusEmoji = $percentage >= 100 ? '🔥' : ($percentage >= 80 ? '⚠️' : '✅');
+//     foreach ($budgets as $budget) {
+//         $spent = $spendings[strtolower($budget->category)] ?? 0;
+//         $remaining = $budget->amount - $spent;
+//         $percentage = $budget->amount > 0 ? ($spent / $budget->amount) * 100 : 0;
+//         $statusEmoji = $percentage >= 100 ? '🔥' : ($percentage >= 80 ? '⚠️' : '✅');
 
-        $reply .= "{$statusEmoji} *Kategori: {$budget->category}*\n";
-        $reply .= "   - *Terpakai:* Rp " . number_format($spent, 0, ',', '.') . "\n";
-        $reply .= "   - *Sisa:* Rp " . number_format($remaining, 0, ',', '.') . "\n";
-        $reply .= "   - *Budget:* Rp " . number_format($budget->amount, 0, ',', '.') . " (" . number_format($percentage, 1) . "%)\n\n";
-    }
+//         $reply .= "{$statusEmoji} *Kategori: {$budget->category}*\n";
+//         $reply .= "   - *Terpakai:* Rp " . number_format($spent, 0, ',', '.') . "\n";
+//         $reply .= "   - *Sisa:* Rp " . number_format($remaining, 0, ',', '.') . "\n";
+//         $reply .= "   - *Budget:* Rp " . number_format($budget->amount, 0, ',', '.') . " (" . number_format($percentage, 1) . "%)\n\n";
+//     }
 
-    return response()->json(['reply' => $reply]);
-}
+//     return response()->json(['reply' => $reply]);
+// }
 
 private function handleCreateEmergencyFund($phone, $data)
 {
@@ -268,24 +351,24 @@ private function handleUseEmergencyFund($phone, $data)
     return response()->json(['reply' => $naturalReply]);
 }
 
-private function handleShowEmergencyFund($phone)
-{
-    $emergencyFund = Saving::where('user_phone', $phone)->where('is_emergency_fund', true)->first();
+// private function handleShowEmergencyFund($phone)
+// {
+//     $emergencyFund = Saving::where('user_phone', $phone)->where('is_emergency_fund', true)->first();
 
-    if (!$emergencyFund) {
-        return response()->json(['reply' => "Anda belum mengatur Dana Darurat. Yuk, atur targetnya dengan perintah 'set dana darurat ...'"]);
-    }
+//     if (!$emergencyFund) {
+//         return response()->json(['reply' => "Anda belum mengatur Dana Darurat. Yuk, atur targetnya dengan perintah 'set dana darurat ...'"]);
+//     }
 
-    $progress = $emergencyFund->target_amount > 0 ? ($emergencyFund->current_amount / $emergencyFund->target_amount) * 100 : 100;
+//     $progress = $emergencyFund->target_amount > 0 ? ($emergencyFund->current_amount / $emergencyFund->target_amount) * 100 : 100;
 
-    $reply = "🚨 *Status Dana Darurat Anda*\n\n";
-    $reply .= "   - *Terkumpul:* Rp " . number_format($emergencyFund->current_amount, 0, ',', '.') . "\n";
-    $reply .= "   - *Target:* Rp " . number_format($emergencyFund->target_amount, 0, ',', '.') . "\n";
-    $reply .= "   - *Progres:* " . number_format($progress, 1) . "% dari target\n\n";
-    $reply .= "_Ingat, dana ini untuk keadaan mendesak. Selalu prioritaskan untuk mengisinya kembali jika terpakai._";
+//     $reply = "🚨 *Status Dana Darurat Anda*\n\n";
+//     $reply .= "   - *Terkumpul:* Rp " . number_format($emergencyFund->current_amount, 0, ',', '.') . "\n";
+//     $reply .= "   - *Target:* Rp " . number_format($emergencyFund->target_amount, 0, ',', '.') . "\n";
+//     $reply .= "   - *Progres:* " . number_format($progress, 1) . "% dari target\n\n";
+//     $reply .= "_Ingat, dana ini untuk keadaan mendesak. Selalu prioritaskan untuk mengisinya kembali jika terpakai._";
 
-    return response()->json(['reply' => $reply]);
-}
+//     return response()->json(['reply' => $reply]);
+// }
 
     // Tambahkan 3 fungsi baru ini di dalam class WebhookController
 
@@ -350,75 +433,75 @@ private function handleAddToSaving($phone, $data)
     return response()->json(['reply' => $naturalReply]);
 }
 
-private function handleShowSavings($phone)
-{
-    $savings = Saving::where('user_phone', $phone)->get();
+// private function handleShowSavings($phone)
+// {
+//     $savings = Saving::where('user_phone', $phone)->get();
 
-    if ($savings->isEmpty()) {
-        return response()->json(['reply' => "Anda belum punya tujuan tabungan. Yuk, buat satu dengan perintah 'buat tabungan...'!"]);
-    }
+//     if ($savings->isEmpty()) {
+//         return response()->json(['reply' => "Anda belum punya tujuan tabungan. Yuk, buat satu dengan perintah 'buat tabungan...'!"]);
+//     }
 
-    $reply = "🎯 *Progres Tabungan Anda*\n\n";
+//     $reply = "🎯 *Progres Tabungan Anda*\n\n";
 
-    foreach ($savings as $saving) {
-        $progress = ($saving->current_amount / $saving->target_amount) * 100;
-        $statusEmoji = $saving->status === 'completed' ? '✅' : '⏳';
+//     foreach ($savings as $saving) {
+//         $progress = ($saving->current_amount / $saving->target_amount) * 100;
+//         $statusEmoji = $saving->status === 'completed' ? '✅' : '⏳';
 
-        $reply .= "{$statusEmoji} *{$saving->goal_name}*\n";
-        $reply .= "   - *Terkumpul:* Rp " . number_format($saving->current_amount, 0, ',', '.') . "\n";
-        $reply .= "   - *Target:* Rp " . number_format($saving->target_amount, 0, ',', '.') . "\n";
-        $reply .= "   - *Progres:* " . number_format($progress, 1) . "%\n\n";
-    }
+//         $reply .= "{$statusEmoji} *{$saving->goal_name}*\n";
+//         $reply .= "   - *Terkumpul:* Rp " . number_format($saving->current_amount, 0, ',', '.') . "\n";
+//         $reply .= "   - *Target:* Rp " . number_format($saving->target_amount, 0, ',', '.') . "\n";
+//         $reply .= "   - *Progres:* " . number_format($progress, 1) . "%\n\n";
+//     }
 
-    return response()->json(['reply' => $reply]);
-}
-private function handlePortfolio($phone)
-{
-    // Query ini akan mengelompokkan aset dan menghitung totalnya
-    $assets = InvestmentTransaction::where('user_phone', $phone)
-        ->select(
-            'asset_name',
-            'asset_type',
-            // Menjumlahkan quantity 'beli' dan mengurangi quantity 'jual'
-            DB::raw("SUM(CASE WHEN type = 'beli' THEN quantity ELSE -quantity END) as total_quantity"),
-            // Menjumlahkan total_amount 'beli' dan mengurangi total_amount 'jual'
-            DB::raw("SUM(CASE WHEN type = 'beli' THEN total_amount ELSE -total_amount END) as total_capital")
-        )
-        ->groupBy('asset_name', 'asset_type')
-        ->get();
+//     return response()->json(['reply' => $reply]);
+// }
+// private function handlePortfolio($phone)
+// {
+//     // Query ini akan mengelompokkan aset dan menghitung totalnya
+//     $assets = InvestmentTransaction::where('user_phone', $phone)
+//         ->select(
+//             'asset_name',
+//             'asset_type',
+//             // Menjumlahkan quantity 'beli' dan mengurangi quantity 'jual'
+//             DB::raw("SUM(CASE WHEN type = 'beli' THEN quantity ELSE -quantity END) as total_quantity"),
+//             // Menjumlahkan total_amount 'beli' dan mengurangi total_amount 'jual'
+//             DB::raw("SUM(CASE WHEN type = 'beli' THEN total_amount ELSE -total_amount END) as total_capital")
+//         )
+//         ->groupBy('asset_name', 'asset_type')
+//         ->get();
 
-    // Filter aset yang quantity-nya sudah 0 atau kurang (sudah dijual semua)
-    $portfolio = $assets->filter(function ($asset) {
-        return $asset->total_quantity > 0.00000001; // Toleransi kecil untuk angka desimal
-    });
+//     // Filter aset yang quantity-nya sudah 0 atau kurang (sudah dijual semua)
+//     $portfolio = $assets->filter(function ($asset) {
+//         return $asset->total_quantity > 0.00000001; // Toleransi kecil untuk angka desimal
+//     });
 
-    if ($portfolio->isEmpty()) {
-        return response()->json(['reply' => "Anda belum memiliki aset investasi apapun. Coba catat transaksi pertama Anda!"]);
-    }
+//     if ($portfolio->isEmpty()) {
+//         return response()->json(['reply' => "Anda belum memiliki aset investasi apapun. Coba catat transaksi pertama Anda!"]);
+//     }
 
-    $reply = "💼 *Portofolio Investasi Anda*\n\n";
+//     $reply = "💼 *Portofolio Investasi Anda*\n\n";
 
-    foreach ($portfolio as $asset) {
-        // Hitung rata-rata harga beli
-        $averagePrice = $asset->total_capital / $asset->total_quantity;
+//     foreach ($portfolio as $asset) {
+//         // Hitung rata-rata harga beli
+//         $averagePrice = $asset->total_capital / $asset->total_quantity;
 
-        // Pilih emoji berdasarkan tipe aset
-        $emoji = match(strtolower($asset->asset_type)) {
-            'crypto' => '💎',
-            'saham' => '📈',
-            'emas' => '🪙',
-            'reksadana' => '📄',
-            default => '💰'
-        };
+//         // Pilih emoji berdasarkan tipe aset
+//         $emoji = match(strtolower($asset->asset_type)) {
+//             'crypto' => '💎',
+//             'saham' => '📈',
+//             'emas' => '🪙',
+//             'reksadana' => '📄',
+//             default => '💰'
+//         };
 
-        $reply .= "{$emoji} *{$asset->asset_name}* ({$asset->asset_type})\n";
-        $reply .= "   - *Jumlah:* " . rtrim(rtrim(number_format($asset->total_quantity, 8), '0'), '.') . " unit\n";
-        $reply .= "   - *Avg. Beli:* Rp " . number_format($averagePrice, 2, ',', '.') . " /unit\n";
-        $reply .= "   - *Modal:* Rp " . number_format($asset->total_capital, 2, ',', '.') . "\n\n";
-    }
+//         $reply .= "{$emoji} *{$asset->asset_name}* ({$asset->asset_type})\n";
+//         $reply .= "   - *Jumlah:* " . rtrim(rtrim(number_format($asset->total_quantity, 8), '0'), '.') . " unit\n";
+//         $reply .= "   - *Avg. Beli:* Rp " . number_format($averagePrice, 2, ',', '.') . " /unit\n";
+//         $reply .= "   - *Modal:* Rp " . number_format($asset->total_capital, 2, ',', '.') . "\n\n";
+//     }
 
-    return response()->json(['reply' => $reply]);
-}
+//     return response()->json(['reply' => $reply]);
+// }
 
     private function getStructuredCommandFromGroq($userMessage)
     {
@@ -429,134 +512,66 @@ private function handlePortfolio($phone)
         }
         // Ganti HANYA bagian systemPrompt di dalam fungsi getStructuredCommandFromGroq Anda
 
+// Ganti SELURUH isi variabel $systemPrompt Anda dengan kode di bawah ini
+
 $systemPrompt = <<<PROMPT
-Anda adalah asisten keuangan pribadi yang sangat pintar. Tugas utama Anda adalah mengubah pesan bahasa alami dari pengguna menjadi format JSON yang terstruktur agar bisa diproses oleh sistem.
-Selalu balas HANYA dengan format JSON, tanpa penjelasan apa pun.
+Anda adalah asisten keuangan pribadi yang sangat pintar. Tugas utama Anda adalah mengubah pesan bahasa alami dari pengguna menjadi format JSON yang terstruktur. Selalu balas HANYA dengan format JSON.
 
 Berikut adalah format JSON yang harus Anda gunakan:
-1. Untuk mencatat transaksi:
-{"command":"catat_transaksi", "data":{"type":"pengeluaran" atau "pemasukan", "amount":_jumlah_angka_, "description":"_deskripsi_singkat_", "category":"_opsional_kategori_"}}
+1.  **Transaksi:** {"command":"catat_transaksi", "data":{"type":"pengeluaran" atau "pemasukan", "amount":_angka_, "description":"_deskripsi_"}}
+2.  **Hutang/Piutang:** {"command":"catat_hutang_piutang", "data":{"type":"hutang" atau "piutang", "amount":_angka_, "person_name":"_nama_", "description":"_deskripsi_"}}
+3.  **Lunas:** {"command":"tandai_lunas", "data":{"amount":_angka_, "person_name":"_nama_"}}
+4.  **Investasi:** {"command":"catat_investasi", "data":{"type":"beli" atau "jual", "asset_name":"_aset_", "asset_type":"crypto" atau "saham" dll, "quantity":_unit_, "price_per_unit":_harga_}}
+5.  **Buat Tabungan:** {"command":"buat_tabungan", "data":{"goal_name":"_tujuan_", "target_amount":_target_}}
+6.  **Tambah Tabungan:** {"command":"tambah_tabungan", "data":{"goal_name":"_tujuan_", "amount":_jumlah_}}
+7.  **Buat Dana Darurat:** {"command":"buat_dana_darurat", "data":{"target_amount":_target_}}
+8.  **Tambah Dana Darurat:** {"command":"tambah_dana_darurat", "data":{"amount":_jumlah_}}
+9.  **Pakai Dana Darurat:** {"command":"pakai_dana_darurat", "data":{"amount":_jumlah_, "description":"_alasan_"}}
+10. **Set Budget:** {"command":"set_budget", "data":{"category":"_kategori_", "amount":_jumlah_}}
+11. **Transaksi Berulang (Buat):** {"command":"buat_transaksi_berulang", "data":{"type":"pemasukan" atau "pengeluaran", "amount":_jumlah_, "description":"_deskripsi_", "day_of_month":_tanggal_}}
+12. **Transaksi Berulang (Lihat):** {"command":"lihat_transaksi_berulang"}
+13. **Transaksi Berulang (Hapus):** {"command":"hapus_transaksi_berulang", "data":{"description":"_deskripsi_"}}
+14. **Laporan (Fleksibel):** {"command":"lihat_laporan", "data":{"jenis_laporan":"utama" atau "transaksi" atau "hutang" atau "investasi" atau "tabungan" atau "budget", "periode":"hari" atau "minggu" atau "bulan"}}
+15. **Bantuan:** {"command":"bantuan"}
+16. **Info Kurang:** {"command":"minta_info_tambahan", "data":{"pertanyaan":"_pertanyaan_untuk_pengguna_"}}
+17. **Error:** {"error":"Maaf, saya kurang paham."}
+18. Untuk mengekspor data ke format teks CSV:
+{"command":"export_data", "data":{"jenis_data":"transaksi" atau "investasi" atau "hutang", "periode":"bulan_ini" atau "tahun_ini" atau "semua"}}
 
-2. Untuk mencatat hutang/piutang:
-{"command":"catat_hutang_piutang", "data":{"type":"hutang" atau "piutang", "amount":_jumlah_angka_, "person_name":"_nama_orang_", "description":"_deskripsi_singkat_"}}
 
-3. Untuk menandai lunas:
-{"command":"tandai_lunas", "data":{"amount":_jumlah_angka_, "person_name":"_nama_orang_"}}
+Contoh-contoh Penting:
+User: laporan bulan ini
+Output: {"command":"lihat_laporan", "data":{"jenis_laporan":"utama", "periode":"bulan"}}
 
-4. Untuk mencatat investasi:
-{"command":"catat_investasi", "data":{"type":"beli" atau "jual", "asset_name":"_nama_aset_", "asset_type":"crypto" atau "saham" atau "emas" atau lainnya, "quantity":_jumlah_unit_, "price_per_unit":_harga_per_unit_}}
+User: gimana status utang piutangku?
+Output: {"command":"lihat_laporan", "data":{"jenis_laporan":"hutang", "periode":null}}
 
-5. Untuk meminta laporan:
-{"command":"laporan_keuangan"}
+User: cek budget
+Output: {"command":"lihat_laporan", "data":{"jenis_laporan":"budget", "periode":null}}
 
-6. Jika pengguna meminta bantuan:
-{"command":"bantuan"}
+User: /portfolio
+Output: {"command":"lihat_laporan", "data":{"jenis_laporan":"investasi", "periode":null}}
 
-7. Jika informasi untuk sebuah perintah TIDAK LENGKAP (misal: "catat pengeluaran" tanpa jumlah, atau "catat hutang" tanpa nama/jumlah), minta informasi tambahan:
-{"command":"minta_info_tambahan", "data":{"pertanyaan":"_pertanyaan_untuk_minta_info_tambahan_"}}
+User: /tabungan
+Output: {"command":"lihat_laporan", "data":{"jenis_laporan":"tabungan", "periode":null}}
 
-8. Jika Anda sama sekali tidak mengerti atau perintahnya di luar konteks keuangan:
-{"error":"Maaf, saya kurang paham. Bisa tolong perjelas lagi perintahnya?"}
-
-9. Untuk melihat ringkasan portofolio investasi:
-{"command":"lihat_portfolio"}
-
-10. Untuk membuat tujuan tabungan baru:
-{"command":"buat_tabungan", "data":{"goal_name":"_nama_tujuan_", "target_amount":_jumlah_target_}}
-
-11. Untuk menambah uang ke tabungan yang sudah ada:
-{"command":"tambah_tabungan", "data":{"goal_name":"_nama_tujuan_", "amount":_jumlah_uang_}}
-
-12. Untuk melihat progres semua tabungan:
-{"command":"lihat_tabungan"}
-
-13. Untuk membuat/set target Dana Darurat:
-{"command":"buat_dana_darurat", "data":{"target_amount":_jumlah_target_}}
-
-14. Untuk menambah uang ke Dana Darurat:
-{"command":"tambah_dana_darurat", "data":{"amount":_jumlah_uang_}}
-
-15. Untuk memakai/menarik uang dari Dana Darurat:
-{"command":"pakai_dana_darurat", "data":{"amount":_jumlah_uang_, "description":"_alasan_pemakaian_"}}
-
-16. Untuk melihat status Dana Darurat:
-{"command":"lihat_dana_darurat"}
-
-17. Untuk mengatur budget bulanan untuk sebuah kategori:
-{"command":"set_budget", "data":{"category":"_nama_kategori_", "amount":_jumlah_uang_}}
-
-18. Untuk melihat ringkasan budget bulan ini:
-{"command":"lihat_budget"}
-
-19. Untuk membuat transaksi berulang:
-{"command":"buat_transaksi_berulang", "data":{"type":"pemasukan" atau "pengeluaran", "amount":_jumlah_, "description":"_deskripsi_", "category":"_opsional_kategori_", "day_of_month":_tanggal_}}
-
-20. Untuk melihat daftar transaksi berulang:
-{"command":"lihat_transaksi_berulang"}
-
-21. Untuk menghapus transaksi berulang:
-{"command":"hapus_transaksi_berulang", "data":{"description":"_deskripsi_unik_"}}
-
-Contoh:
-User: tadi abis 35rb buat makan siang
-Output: {"command":"catat_transaksi", "data":{"type":"pengeluaran", "amount":35000, "description":"makan siang", "category":"makanan"}}
+User: laporan transaksi minggu kemarin
+Output: {"command":"lihat_laporan", "data":{"jenis_laporan":"transaksi", "periode":"minggu"}}
 
 User: aku punya utang
 Output: {"command":"minta_info_tambahan", "data":{"pertanyaan":"Tentu, hutang kepada siapa dan berapa jumlahnya?"}}
 
-User: pengeluaran
-Output: {"command":"minta_info_tambahan", "data":{"pertanyaan":"Oke, mau catat pengeluaran apa dan berapa jumlahnya?"}}
-
 User: beli saham bbca 1 lot harga 9500
 Output: {"command":"catat_investasi", "data":{"type":"beli", "asset_name":"Saham BBCA", "asset_type":"saham", "quantity":100, "price_per_unit":9500}}
 
-User: jual crypto bitcoin 0.01 btc
-Output: {"command":"minta_info_tambahan", "data":{"pertanyaan":"Tentu, dijual di harga berapa per BTC nya?"}}
+User: atur pengeluaran spotify 55rb tiap tgl 28
+Output: {"command":"buat_transaksi_berulang", "data":{"type":"pengeluaran", "amount":55000, "description":"Spotify", "day_of_month":28}}
 
-User: /portfolio
-Output: {"command":"lihat_portfolio"}
+User: export transaksi bulan ini
+Output: {"command":"export_data", "data":{"jenis_data":"transaksi", "periode":"bulan_ini"}}
 
-User: liat portofolio investasi saya
-Output: {"command":"lihat_portfolio"}
-
-User: asetku ada apa aja?
-Output: {"command":"lihat_portfolio"}
-
-User: buat tabungan laptop baru target 15jt
-Output: {"command":"buat_tabungan", "data":{"goal_name":"Laptop Baru", "target_amount":15000000}}
-
-User: nabung 500rb buat laptop baru
-Output: {"command":"tambah_tabungan", "data":{"goal_name":"Laptop Baru", "amount":500000}}
-
-User: /tabungan
-Output: {"command":"lihat_tabungan"}
-
-User: set dana darurat 10jt
-Output: {"command":"buat_dana_darurat", "data":{"target_amount":10000000}}
-
-User: tambah dana darurat 250rb
-Output: {"command":"tambah_dana_darurat", "data":{"amount":250000}}
-
-User: pake dana darurat 1jt buat servis motor
-Output: {"command":"pakai_dana_darurat", "data":{"amount":1000000, "description":"servis motor"}}
-
-User: /danadarurat
-Output: {"command":"lihat_dana_darurat"}
-
-User: set budget makanan bulan ini 1.5jt
-Output: {"command":"set_budget", "data":{"category":"makanan", "amount":1500000}}
-
-User: /budget
-Output: {"command":"lihat_budget"}
-
-User: atur pengeluaran bulanan netflix 186rb setiap tanggal 10
-Output: {"command":"buat_transaksi_berulang", "data":{"type":"pengeluaran", "amount":186000, "description":"Netflix", "category":"hiburan", "day_of_month":10}}
-
-User: /rutin
-Output: {"command":"lihat_transaksi_berulang"}
-
-User: hapus pengeluaran rutin netflix
-Output: {"command":"hapus_transaksi_berulang", "data":{"description":"Netflix"}}
+User: kirim semua data investasiku
+Output: {"command":"export_data", "data":{"jenis_data":"investasi", "periode":"semua"}}
 PROMPT;
 
         try {
@@ -670,42 +685,42 @@ private function handleInvestmentFromAI($phone, $data)
         }
     }
 
-    private function handleReportFromAI($phone, $message)
-    {
-        $parts = explode(' ', $message);
-        $period = 'hari';
-        foreach($parts as $part) {
-            if (in_array(strtolower($part), ['minggu', 'mingguan', 'week'])) { $period = 'minggu'; break; }
-            if (in_array(strtolower($part), ['bulan', 'bulanan', 'month'])) { $period = 'bulan'; break; }
-        }
-        $category = null;
-        if (str_contains($message, '#')) {
-            $categoryParts = explode('#', $message, 2); $category = trim($categoryParts[1]);
-        }
-        $query = Transaction::where('user_phone', $phone);
-        switch ($period) {
-            case 'hari': $query->whereDate('created_at', today()); $periodName = 'Hari Ini'; break;
-            case 'minggu': $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]); $periodName = 'Minggu Ini'; break;
-            case 'bulan': $query->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]); $periodName = 'Bulan Ini'; break;
-        }
-        if ($category) { $query->where('category', $category); $periodName .= " (Kategori: #{$category})"; }
-        $transactions = $query->orderBy('created_at', 'desc')->get();
-        if ($transactions->isEmpty()) { return response()->json(['reply' => "Tidak ada data transaksi untuk *{$periodName}*. 🤔"]); }
-        $totalPemasukan = $transactions->where('type', 'pemasukan')->sum('amount');
-        $totalPengeluaran = $transactions->where('type', 'pengeluaran')->sum('amount');
-        $selisih = $totalPemasukan - $totalPengeluaran;
-        $reply = "📊 *Laporan Keuangan {$periodName}*\n\n";
-        $reply .= "💰 *Total Pemasukan:*\nRp " . number_format($totalPemasukan, 0, ',', '.') . "\n\n";
-        $reply .= "💸 *Total Pengeluaran:*\nRp " . number_format($totalPengeluaran, 0, ',', '.') . "\n\n";
-        $reply .= "⚖️ *Selisih (Cash Flow):*\nRp " . number_format($selisih, 0, ',', '.') . "\n";
-        $reply .= "-----------------------------------\n*5 Transaksi Terakhir:*\n";
-        foreach ($transactions->take(5) as $trx) {
-            $emoji = $trx->type == 'pemasukan' ? '🟢' : '🔴';
-            $amountFormatted = number_format($trx->amount, 0, ',', '.');
-            $reply .= "{$emoji} Rp {$amountFormatted} - {$trx->description}\n";
-        }
-        return response()->json(['reply' => $reply]);
-    }
+    // private function handleReportFromAI($phone, $message)
+    // {
+    //     $parts = explode(' ', $message);
+    //     $period = 'hari';
+    //     foreach($parts as $part) {
+    //         if (in_array(strtolower($part), ['minggu', 'mingguan', 'week'])) { $period = 'minggu'; break; }
+    //         if (in_array(strtolower($part), ['bulan', 'bulanan', 'month'])) { $period = 'bulan'; break; }
+    //     }
+    //     $category = null;
+    //     if (str_contains($message, '#')) {
+    //         $categoryParts = explode('#', $message, 2); $category = trim($categoryParts[1]);
+    //     }
+    //     $query = Transaction::where('user_phone', $phone);
+    //     switch ($period) {
+    //         case 'hari': $query->whereDate('created_at', today()); $periodName = 'Hari Ini'; break;
+    //         case 'minggu': $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]); $periodName = 'Minggu Ini'; break;
+    //         case 'bulan': $query->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]); $periodName = 'Bulan Ini'; break;
+    //     }
+    //     if ($category) { $query->where('category', $category); $periodName .= " (Kategori: #{$category})"; }
+    //     $transactions = $query->orderBy('created_at', 'desc')->get();
+    //     if ($transactions->isEmpty()) { return response()->json(['reply' => "Tidak ada data transaksi untuk *{$periodName}*. 🤔"]); }
+    //     $totalPemasukan = $transactions->where('type', 'pemasukan')->sum('amount');
+    //     $totalPengeluaran = $transactions->where('type', 'pengeluaran')->sum('amount');
+    //     $selisih = $totalPemasukan - $totalPengeluaran;
+    //     $reply = "📊 *Laporan Keuangan {$periodName}*\n\n";
+    //     $reply .= "💰 *Total Pemasukan:*\nRp " . number_format($totalPemasukan, 0, ',', '.') . "\n\n";
+    //     $reply .= "💸 *Total Pengeluaran:*\nRp " . number_format($totalPengeluaran, 0, ',', '.') . "\n\n";
+    //     $reply .= "⚖️ *Selisih (Cash Flow):*\nRp " . number_format($selisih, 0, ',', '.') . "\n";
+    //     $reply .= "-----------------------------------\n*5 Transaksi Terakhir:*\n";
+    //     foreach ($transactions->take(5) as $trx) {
+    //         $emoji = $trx->type == 'pemasukan' ? '🟢' : '🔴';
+    //         $amountFormatted = number_format($trx->amount, 0, ',', '.');
+    //         $reply .= "{$emoji} Rp {$amountFormatted} - {$trx->description}\n";
+    //     }
+    //     return response()->json(['reply' => $reply]);
+    // }
 
     private function showHelp()
     {
@@ -750,5 +765,159 @@ private function handleInvestmentFromAI($phone, $data)
             return "Aksi berhasil dilakukan!";
         }
     }
+
+
+    // --- FUNGSI-FUNGSI BARU UNTUK LAPORAN KOMPREHENSIF ---
+
+/**
+ * Fungsi utama yang menjadi "otak" untuk semua jenis laporan.
+ */
+private function handleShowReport($phone, $data)
+{
+    $reportType = $data['jenis_laporan'] ?? 'utama';
+    $period = $data['periode'] ?? 'bulan'; // Default periode ke bulan
+
+    switch ($reportType) {
+        case 'transaksi':
+            return response()->json(['reply' => $this->generateCashFlowReport($phone, $period)]);
+        case 'hutang':
+            return response()->json(['reply' => $this->generateDebtReport($phone)]);
+        case 'investasi':
+            return response()->json(['reply' => $this->generatePortfolioReport($phone)]);
+        case 'tabungan':
+            // Menggabungkan tabungan dan dana darurat
+            $savingsReport = $this->generateSavingsReport($phone);
+            $emergencyFundReport = $this->generateEmergencyFundReport($phone, false); // false = jangan tampilkan header
+            return response()->json(['reply' => $savingsReport . "\n\n" . $emergencyFundReport]);
+        case 'budget':
+            return response()->json(['reply' => $this->generateBudgetReport($phone)]);
+        case 'utama':
+        default:
+            // Laporan utama akan menampilkan semua ringkasan
+            $netWorth = $this->generateNetWorthSummary($phone);
+            $cashFlow = $this->generateCashFlowReport($phone, $period);
+            $debt = $this->generateDebtReport($phone);
+            $portfolio = $this->generatePortfolioReport($phone);
+
+            $fullReport = "📊 *Laporan Keuangan Komprehensif*\n";
+            $fullReport .= "-----------------------------------\n";
+            $fullReport .= $netWorth . "\n";
+            $fullReport .= "-----------------------------------\n";
+            $fullReport .= $cashFlow . "\n";
+            $fullReport .= "-----------------------------------\n";
+            $fullReport .= $debt . "\n";
+            $fullReport .= "-----------------------------------\n";
+            $fullReport .= $portfolio;
+
+            return response()->json(['reply' => $fullReport]);
+    }
+}
+
+/**
+ * Menghasilkan ringkasan kekayaan bersih (Net Worth).
+ */
+private function generateNetWorthSummary($phone)
+{
+    // 1. Aset Lancar (Tabungan + Dana Darurat)
+    $liquidAssets = Saving::where('user_phone', $phone)->sum('current_amount');
+
+    // 2. Aset Investasi (Modal)
+    $investmentCapital = InvestmentTransaction::where('user_phone', $phone)
+        ->select(DB::raw("SUM(CASE WHEN type = 'beli' THEN total_amount ELSE -total_amount END) as total_capital"))
+        ->value('total_capital') ?? 0;
+
+    // 3. Piutang (Uang yang dipinjam orang)
+    $receivables = Debt::where('user_phone', $phone)->where('type', 'piutang')->where('status', 'belum lunas')->sum('amount');
+
+    // 4. Hutang (Uang yang kita pinjam)
+    $debts = Debt::where('user_phone', $phone)->where('type', 'hutang')->where('status', 'belum lunas')->sum('amount');
+
+    $totalAssets = $liquidAssets + $investmentCapital + $receivables;
+    $netWorth = $totalAssets - $debts;
+
+    $reply = "👑 *Ringkasan Kekayaan Bersih*\n\n";
+    $reply .= "🟢 *Total Aset:* Rp " . number_format($totalAssets, 0, ',', '.') . "\n";
+    $reply .= "🔴 *Total Hutang:* Rp " . number_format($debts, 0, ',', '.') . "\n";
+    $reply .= "⚖️ *Estimasi Kekayaan Bersih:*\n*Rp " . number_format($netWorth, 0, ',', '.') . "*";
+
+    return $reply;
+}
+
+/**
+ * Menghasilkan laporan Hutang & Piutang yang masih aktif.
+ */
+private function generateDebtReport($phone)
+{
+    $debts = Debt::where('user_phone', $phone)->where('status', 'belum lunas')->orderBy('type')->get();
+    if ($debts->isEmpty()) {
+        return "⛓️ *Laporan Hutang & Piutang*\n\n✅ Anda tidak memiliki hutang/piutang aktif.";
+    }
+
+    $reply = "⛓️ *Laporan Hutang & Piutang Aktif*\n\n";
+    $piutangList = "";
+    $hutangList = "";
+
+    foreach ($debts as $debt) {
+        $amount = number_format($debt->amount, 0, ',', '.');
+        if ($debt->type == 'piutang') {
+            $piutangList .= "   - *{$debt->person_name}:* Rp {$amount}\n";
+        } else {
+            $hutangList .= "   - *Kepada {$debt->person_name}:* Rp {$amount}\n";
+        }
+    }
+
+    if (!empty($piutangList)) $reply .= "✅ *Uang Anda di Luar (Piutang):*\n" . $piutangList;
+    if (!empty($hutangList)) $reply .= "\n🔴 *Kewajiban Anda (Hutang):*\n" . $hutangList;
+
+    return $reply;
+}
+
+/**
+ * Versi baru untuk laporan transaksi (Arus Kas).
+ */
+private function generateCashFlowReport($phone, $period) {
+    // Logika ini sama dengan handleReportFromAI yang lama, kita pindahkan ke sini
+    $query = Transaction::where('user_phone', $phone);
+    $periodName = 'Bulan Ini'; // Default
+    switch ($period) {
+        case 'hari': $query->whereDate('created_at', today()); $periodName = 'Hari Ini'; break;
+        case 'minggu': $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]); $periodName = 'Minggu Ini'; break;
+        case 'bulan': $query->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]); $periodName = 'Bulan Ini'; break;
+    }
+    $transactions = $query->get();
+    if ($transactions->isEmpty()) { return "💸 *Laporan Arus Kas {$periodName}*\n\nTidak ada transaksi."; }
+
+    $totalPemasukan = $transactions->where('type', 'pemasukan')->sum('amount');
+    $totalPengeluaran = $transactions->where('type', 'pengeluaran')->sum('amount');
+
+    $reply = "💸 *Laporan Arus Kas {$periodName}*\n\n";
+    $reply .= "   - *Pemasukan:* Rp " . number_format($totalPemasukan, 0, ',', '.') . "\n";
+    $reply .= "   - *Pengeluaran:* Rp " . number_format($totalPengeluaran, 0, ',', '.');
+    return $reply;
+}
+
+/**
+ * Versi baru untuk laporan investasi (Portofolio).
+ */
+private function generatePortfolioReport($phone) {
+    // Logika ini sama dengan handlePortfolio yang lama
+    $assets = InvestmentTransaction::where('user_phone', $phone)
+        ->select('asset_name', 'asset_type', DB::raw("SUM(CASE WHEN type = 'beli' THEN quantity ELSE -quantity END) as total_quantity"), DB::raw("SUM(CASE WHEN type = 'beli' THEN total_amount ELSE -total_amount END) as total_capital"))
+        ->groupBy('asset_name', 'asset_type')->get();
+    $portfolio = $assets->filter(function ($asset) { return $asset->total_quantity > 0.00000001; });
+    if ($portfolio->isEmpty()) { return "📈 *Portofolio Investasi*\n\nAnda belum memiliki aset investasi."; }
+
+    $reply = "📈 *Portofolio Investasi*\n";
+    foreach ($portfolio as $asset) {
+        $averagePrice = $asset->total_capital / $asset->total_quantity;
+        $reply .= "\n   - *{$asset->asset_name} ({$asset->asset_type})*\n";
+        $reply .= "     *Jumlah:* " . rtrim(rtrim(number_format($asset->total_quantity, 8), '0'), '.') . " unit\n";
+        $reply .= "     *Modal:* Rp " . number_format($asset->total_capital, 0, ',', '.');
+    }
+    return $reply;
+}
+
+// Anda juga bisa membuat fungsi generateSavingsReport, generateEmergencyFundReport, dan generateBudgetReport
+// dengan memindahkan logika dari fungsi handle... yang lama ke sini agar lebih rapi.
 
 }

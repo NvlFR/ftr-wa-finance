@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule; // <-- Import facade Schedule
 use App\Console\Commands\SendDailyReport;
 use App\Console\Commands\ProcessRecurringTransactions;
+use App\Console\Commands\CleanupOldExports;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -12,3 +13,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command(SendDailyReport::class)->dailyAt('08:00');
 Schedule::command(ProcessRecurringTransactions::class)->dailyAt('01:00');
+Schedule::command(CleanupOldExports::class)->hourly();

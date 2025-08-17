@@ -49,28 +49,46 @@ async function connectToWhatsApp() {
 
     console.log(`Pesan dari [${senderNumber}]: "${messageText}"`);
 
-    try {
-      // Kirim data ke API Laravel menggunakan Axios
-      const response = await axios.post(LARAVEL_API_URL, {
+try {
+    const response = await axios.post(LARAVEL_API_URL, {
         phone: senderNumber,
         message: messageText,
         // secret: BOT_SECRET_KEY,
-      });
+    });
 
-      // Ambil balasan dari Laravel
-      const replyText = response.data.reply;
-      if (replyText) {
-        await sock.sendMessage(senderNumber, { text: replyText });
-        console.log(`Balasan terkirim ke [${senderNumber}]: "${replyText}"`);
-      }
-    } catch (error) {
-      // Modifikasi di sini untuk menampilkan detail error dari server
-      if (error.response) {
-        console.error('Error saat menghubungi API Laravel:', JSON.stringify(error.response.data, null, 2));
-      } else {
-        console.error('Error saat menghubungi API Laravel:', error.message);
-      }
+    const responseData = response.data;
+
+    // Cek tipe balasan dari Laravel
+    if (responseData.type === 'file') {
+        // --- LOGIKA BARU UNTUK MENGIRIM FILE ---
+        console.log(`Menerima permintaan file dari Laravel: ${responseData.url}`);
+
+        // 1. Download file dari URL yang diberikan Laravel
+        const fileResponse = await axios.get(responseData.url, { responseType: 'arraybuffer' });
+        const fileBuffer = Buffer.from(fileResponse.data);
+
+        // 2. Kirim file sebagai dokumen ke pengguna
+        await sock.sendMessage(senderNumber, {
+            document: fileBuffer,
+            mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            fileName: responseData.fileName,
+            caption: responseData.caption,
+        });
+
+        console.log(`File terkirim ke [${senderNumber}]: "${responseData.fileName}"`);
+
+    } else {
+        // --- LOGIKA LAMA UNTUK MENGIRIM TEKS BIASA ---
+        const replyText = responseData.reply;
+        if (replyText) {
+            await sock.sendMessage(senderNumber, { text: replyText });
+            console.log(`Balasan terkirim ke [${senderNumber}]: "${replyText}"`);
+        }
     }
+} catch (error) {
+    console.error('Error saat menghubungi API Laravel:', error.response ? error.response.data : error.message);
+    await sock.sendMessage(senderNumber, { text: 'Maaf, terjadi kesalahan di server bot. Coba lagi nanti.' });
+}
   });
 }
 
