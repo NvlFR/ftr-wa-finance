@@ -11,6 +11,9 @@ use App\Models\Budget;
 use App\Models\InvestmentTransaction;
 use Illuminate\Http\Request;
 use App\Exports\TransactionsExport;
+use App\Exports\InvestmentsExport;
+use App\Exports\DebtsExport;
+use App\Exports\SavingsExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
@@ -90,30 +93,45 @@ switch ($structuredCommand['command']) {
 
 // Ganti fungsi handleExportData yang lama dengan yang ini
 
+// Ganti fungsi handleExportData yang lama dengan yang ini
 private function handleExportData($phone, $data)
 {
     $dataType = $data['jenis_data'] ?? 'transaksi';
     $period = $data['periode'] ?? 'bulan_ini';
 
     $fileName = "export_{$dataType}_{$phone}_" . time() . '.xlsx';
-    $filePath = "exports/{$fileName}"; // Path di dalam disk 'public'
+    $filePath = "exports/{$fileName}";
+
+    // Nama file yang lebih ramah untuk pengguna
+    $userFriendlyFileName = "Laporan " . ucfirst($dataType) . ".xlsx";
 
     switch ($dataType) {
         case 'transaksi':
-            // Secara eksplisit menyimpan file ke disk 'public'
             Excel::store(new TransactionsExport($phone, $period), $filePath, 'public');
             break;
+
+        case 'investasi':
+            Excel::store(new InvestmentsExport($phone, $period), $filePath, 'public');
+            break;
+
+        case 'hutang':
+            // Ekspor hutang tidak memerlukan periode
+            Excel::store(new DebtsExport($phone), $filePath, 'public');
+            break;
+        case 'tabungan':
+            Excel::store(new SavingsExport($phone), $filePath, 'public');
+            break;
+
         default:
             return response()->json(['reply' => "Maaf, ekspor untuk data '{$dataType}' belum didukung."]);
     }
 
-    // Secara eksplisit meminta URL dari disk 'public'
     $fileUrl = Storage::disk('public')->url($filePath);
 
     return response()->json([
         'type' => 'file',
-        'url' => url($fileUrl), // Pastikan menggunakan full URL
-        'fileName' => "Laporan Keuangan.xlsx", // Beri nama file yang lebih ramah
+        'url' => url($fileUrl),
+        'fileName' => $userFriendlyFileName,
         'caption' => "Ini dia laporan {$dataType} Anda."
     ]);
 }
