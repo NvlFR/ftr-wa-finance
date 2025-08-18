@@ -11,29 +11,33 @@ use Inertia\Inertia;
 class BudgetController extends Controller
 {
     public function index()
-    {
-        $userId = auth()->id();
-        $currentMonth = now()->month;
-        $currentYear = now()->year;
+{
+    $currentMonth = now()->month;
+    $currentYear = now()->year;
 
-        $budgets = Budget::where('user_id', auth()->id())
-            ->where('month', $currentMonth)
-            ->where('year', $currentYear)
-            ->get();
+    // Ganti query ini...
+    // $budgets = Budget::where('user_id', auth()->id())
 
-        $spendings = Transaction::where('user_id', auth()->id())
-            ->where('type', 'pengeluaran')
-            ->whereMonth('created_at', $currentMonth)
-            ->whereYear('created_at', $currentYear)
-            ->select('category', DB::raw('SUM(amount) as total_spent'))
-            ->groupBy('category')
-            ->pluck('total_spent', 'category');
+    // Menjadi ini (lebih bersih):
+    $budgets = auth()->user()->budgets()
+        ->where('month', $currentMonth)
+        ->where('year', $currentYear)
+        ->get();
 
-        return Inertia::render('Budgets/Index', [
-            'budgets' => $budgets,
-            'spendings' => $spendings,
-        ]);
-    }
+    // ... sisa kodenya tetap sama ...
+    $spendings = auth()->user()->transactions()
+        ->where('type', 'pengeluaran')
+        ->whereMonth('created_at', $currentMonth)
+        ->whereYear('created_at', $currentYear)
+        ->select('category', DB::raw('SUM(amount) as total_spent'))
+        ->groupBy('category')
+        ->pluck('total_spent', 'category');
+
+    return Inertia::render('Budgets/Index', [
+        'budgets' => $budgets,
+        'spendings' => $spendings,
+    ]);
+}
 
     public function create()
     {

@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\InvestmentController;
+use App\Http\Controllers\RecurringTransactionController;
 use App\Http\Controllers\SavingController;
 use App\Http\Controllers\DebtController;
 use App\Http\Controllers\PartyController;
@@ -52,6 +53,9 @@ Route::middleware('auth', 'verified')->group(function () {
    Route::resource('budgets', BudgetController::class)
     ->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
     ->middleware(['auth', 'verified']);
+
+    Route::resource('recurring-transactions', RecurringTransactionController::class)
+        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 });
 
 

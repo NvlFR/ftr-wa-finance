@@ -162,7 +162,7 @@ onMounted(() => {
                         </q-item>
                     </q-expansion-item>
 
-                                        <q-item
+                    <q-item
                         clickable
                         v-ripple
                         :active="route().current('budgets.index')"
@@ -176,6 +176,19 @@ onMounted(() => {
                         </q-item-section>
                     </q-item>
 
+                    <q-item
+                        clickable
+                        v-ripple
+                        :active="route().current('recurring-transactions.index')"
+                        @click="router.get(route('recurring-transactions.index'))"
+                    >
+                        <q-item-section avatar>
+                            <q-icon name="event_repeat" />
+                        </q-item-section>
+                        <q-item-section>
+                            <q-item-label>Transaksi Berulang</q-item-label>
+                        </q-item-section>
+                    </q-item>
                     <!-- <q-expansion-item
         icon="sync_alt"
         label="Hutang & Piutang"

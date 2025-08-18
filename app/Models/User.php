@@ -67,4 +67,14 @@ class User extends Authenticatable
     }
 
     public function parties() { return $this->hasMany(Party::class); }
+
+    public function recurringTransactions()
+{
+    return $this->hasMany(RecurringTransaction::class);
+}
+
+public function budgets()
+{
+    return $this->hasMany(Budget::class);
+}
 }

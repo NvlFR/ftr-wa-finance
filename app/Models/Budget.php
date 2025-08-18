@@ -11,10 +11,16 @@ class Budget extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'user_phone',
         'category',
         'amount',
         'month',
         'year',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
