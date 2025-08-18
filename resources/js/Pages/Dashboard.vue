@@ -162,7 +162,24 @@ const cashFlowChartOptions = {
                             :series="cashFlowChartSeries"
                     /></q-card>
                 </div>
+
+                <div v-if="summary.totalBudget > 0">
+                    <div class="text-subtitle2 text-grey-8 q-mt-sm">
+                        Terpakai {{ formatCurrency(summary.totalSpending) }} dari {{ formatCurrency(summary.totalBudget) }}
+                    </div>
+                    <q-linear-progress
+                        rounded
+                        size="20px"
+                        :value="summary.totalSpending / summary.totalBudget"
+                        color="primary"
+                        class="q-mt-xs"
+                    />
+                </div>
+                <div v-else class="text-grey q-mt-sm">
+                    Anda belum mengatur budget untuk bulan ini.
+                </div>
             </div>
+
 
             <div class="row q-col-gutter-md">
                 <div class="col-12 col-md-6">

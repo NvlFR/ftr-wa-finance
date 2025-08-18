@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\InvestmentController;
 use App\Http\Controllers\SavingController;
 use App\Http\Controllers\DebtController;
@@ -47,6 +48,10 @@ Route::middleware('auth', 'verified')->group(function () {
     // --- RUTE BARU & PEMBARUAN DI SINI ---
     Route::resource('parties', PartyController::class);
     Route::resource('debts', DebtController::class);
+
+   Route::resource('budgets', BudgetController::class)
+    ->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
+    ->middleware(['auth', 'verified']);
 });
 
 
