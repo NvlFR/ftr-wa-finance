@@ -1,28 +1,38 @@
 <?php
-// app/Http/Controllers/DashboardController.php
 
 namespace App\Http\Controllers;
 
-use App\Traits\FinancialSummaryTrait; // <-- Gunakan Trait kita
+use App\Traits\FinancialSummaryTrait;
 use Illuminate\Http\Request;
-use Inertia\Inertia; // <-- Gunakan Inertia
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    use FinancialSummaryTrait; // <-- Deklarasikan penggunaan Trait
+    use FinancialSummaryTrait;
 
     public function index()
     {
         $userId = auth()->id();
 
+        // Mengambil semua data ringkasan menggunakan Trait
         $netWorthSummary = $this->getNetWorthSummary($userId);
         $cashFlowMonthly = $this->getCashFlowSummary($userId, 'bulan');
+        $portfolioSummary = $this->getPortfolioSummary($userId);
+        $savingsSummary = $this->getSavingsSummary($userId);
+        $debtsSummary = $this->getDebtsSummary($userId);
 
-        // Menggabungkan semua data untuk dikirim ke frontend
-        $summaryData = array_merge($netWorthSummary, [
-            'monthly_income' => $cashFlowMonthly['income'],
-            'monthly_expense' => $cashFlowMonthly['expense'],
-        ]);
+        // Menyiapkan data untuk dikirim ke frontend
+        $summaryData = [
+            'netWorth' => $netWorthSummary['net_worth'],
+            'totalAssets' => $netWorthSummary['total_assets'],
+            'totalDebts' => $netWorthSummary['total_debts'],
+            'monthlyIncome' => $cashFlowMonthly['income'],
+            'monthlyExpense' => $cashFlowMonthly['expense'],
+            'totalInvestment' => $portfolioSummary->sum('total_capital'),
+            'activeDebts' => $debtsSummary['hutang'],
+            'activeReceivables' => $debtsSummary['piutang'],
+            'savingsGoals' => $savingsSummary,
+        ];
 
         return Inertia::render('Dashboard', [
             'summary' => $summaryData

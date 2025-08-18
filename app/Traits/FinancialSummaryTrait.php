@@ -85,6 +85,7 @@ public function getSavingsSummary($userId)
 public function getDebtsSummary($userId)
 {
     $debts = Debt::where('user_id', $userId)
+        ->with('party')
         ->where('status', 'belum lunas')
         ->orderBy('created_at', 'desc')
         ->get();
