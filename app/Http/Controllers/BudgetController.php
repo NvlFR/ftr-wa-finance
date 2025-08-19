@@ -15,16 +15,11 @@ class BudgetController extends Controller
     $currentMonth = now()->month;
     $currentYear = now()->year;
 
-    // Ganti query ini...
-    // $budgets = Budget::where('user_id', auth()->id())
-
-    // Menjadi ini (lebih bersih):
     $budgets = auth()->user()->budgets()
         ->where('month', $currentMonth)
         ->where('year', $currentYear)
         ->get();
 
-    // ... sisa kodenya tetap sama ...
     $spendings = auth()->user()->transactions()
         ->where('type', 'pengeluaran')
         ->whereMonth('created_at', $currentMonth)
