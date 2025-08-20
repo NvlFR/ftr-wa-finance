@@ -1,9 +1,11 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\Budget;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -14,12 +16,12 @@ class BudgetController extends Controller
         $currentMonth = now()->month;
         $currentYear = now()->year;
 
-        $budgets = auth()->user()->budgets()
+        $budgets = Auth::user()->budgets
             ->where('month', $currentMonth)
             ->where('year', $currentYear)
             ->get();
 
-        $spendings = auth()->user()->transactions()
+        $spendings = Auth::user()->transactions()
             ->where('type', 'pengeluaran')
             ->whereMonth('created_at', $currentMonth)
             ->whereYear('created_at', $currentYear)
@@ -47,7 +49,7 @@ class BudgetController extends Controller
 
         Budget::updateOrCreate(
             [
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'category' => strtolower($validated['category']),
                 'month' => now()->month,
                 'year' => now()->year,
@@ -60,7 +62,7 @@ class BudgetController extends Controller
 
     public function edit(Budget $budget)
     {
-        if ($budget->user_id !== auth()->id()) {
+        if ($budget->user_id !== Auth::id()) {
             abort(403);
         }
 
@@ -69,7 +71,7 @@ class BudgetController extends Controller
 
     public function update(Request $request, Budget $budget)
     {
-        if ($budget->user_id !== auth()->id()) {
+        if ($budget->user_id !== Auth::id()) {
             abort(403);
         }
 
@@ -85,7 +87,7 @@ class BudgetController extends Controller
 
     public function destroy(Budget $budget)
     {
-        if ($budget->user_id !== auth()->id()) {
+        if ($budget->user_id !== Auth::id()) {
             abort(403);
         }
         $budget->delete();

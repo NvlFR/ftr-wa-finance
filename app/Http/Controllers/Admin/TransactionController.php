@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Models\Transaction;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -10,7 +11,7 @@ class TransactionController extends Controller
 {
     public function index()
     {
-        $transactions = Transaction::where('user_id', auth()->id())
+        $transactions = Transaction::where('user_id', Auth::id())
             ->latest()
             ->paginate(15);
 
@@ -41,7 +42,7 @@ class TransactionController extends Controller
 
     public function edit(Transaction $transaction)
     {
-        if ($transaction->user_id !== auth()->id()) {
+        if ($transaction->user_id !== Auth::id()) {
             abort(403);
         }
 
@@ -52,7 +53,7 @@ class TransactionController extends Controller
 
     public function show(Transaction $transaction)
     {
-        if ($transaction->user_id !== auth()->id()) {
+        if ($transaction->user_id !== Auth::id()) {
             abort(403);
         }
 
@@ -63,7 +64,7 @@ class TransactionController extends Controller
 
     public function update(Request $request, Transaction $transaction)
     {
-        if ($transaction->user_id !== auth()->id()) {
+        if ($transaction->user_id !== Auth::id()) {
             abort(403);
         }
 
@@ -82,7 +83,7 @@ class TransactionController extends Controller
 
     public function destroy(Transaction $transaction)
     {
-        if ($transaction->user_id !== auth()->id()) {
+        if ($transaction->user_id !== Auth::id()) {
             abort(403);
         }
 

@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Models\Saving;
-use App\Models\Transaction; // <-- Import Transaction
+use App\Models\Transaction;
 use App\Traits\FinancialSummaryTrait;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -14,7 +15,7 @@ class SavingController extends Controller
 
     public function index()
     {
-        $savings = $this->getSavingsSummary(auth()->id());
+        $savings = $this->getSavingsSummary(Auth::id());
 
         return Inertia::render('App/Admin/Savings/Index', ['savings' => $savings]);
     }
@@ -39,7 +40,7 @@ class SavingController extends Controller
     public function edit(Saving $saving)
     {
         // Otorisasi
-        if ($saving->user_id !== auth()->id() || $saving->is_emergency_fund) {
+        if ($saving->user_id !== Auth::id() || $saving->is_emergency_fund) {
             abort(403); // Dana darurat tidak boleh diedit dari sini
         }
 
@@ -49,7 +50,7 @@ class SavingController extends Controller
     public function update(Request $request, Saving $saving)
     {
         // Otorisasi
-        if ($saving->user_id !== auth()->id() || $saving->is_emergency_fund) {
+        if ($saving->user_id !== Auth::id() || $saving->is_emergency_fund) {
             abort(403);
         }
         $validated = $request->validate([
@@ -64,7 +65,7 @@ class SavingController extends Controller
     public function destroy(Saving $saving)
     {
         // Otorisasi
-        if ($saving->user_id !== auth()->id() || $saving->is_emergency_fund) {
+        if ($saving->user_id !== Auth::id() || $saving->is_emergency_fund) {
             abort(403);
         }
         $saving->delete();
@@ -74,13 +75,13 @@ class SavingController extends Controller
 
     public function addFunds(Request $request, Saving $saving)
     {
-        if ($saving->user_id !== auth()->id()) {
+        if ($saving->user_id !== Auth::id()) {
             abort(403);
         }
         $validated = $request->validate(['amount' => 'required|numeric|min:1']);
 
         Transaction::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'type' => 'pengeluaran',
             'amount' => $validated['amount'],
             'description' => "Menabung untuk {$saving->goal_name}",
@@ -97,11 +98,11 @@ class SavingController extends Controller
     }
     public function show(Saving $saving)
     {
-        if ($saving->user_id !== auth()->id()) {
+        if ($saving->user_id !== Auth::id()) {
             abort(403);
         }
 
-        $history = Transaction::where('user_id', auth()->id())
+        $history = Transaction::where('user_id', Auth::id())
             ->where(function ($query) use ($saving) {
                 $query->where('description', 'like', "%{$saving->goal_name}%")
                       ->orWhere('category', $saving->is_emergency_fund ? 'dana darurat' : 'tabungan');

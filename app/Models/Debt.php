@@ -16,12 +16,12 @@ class Debt extends Model
      */
     protected $fillable = [
         'user_id',
-        'party_id', // <-- Ini yang paling penting
+        'party_id',
         'user_phone',
         'type',
         'amount',
         'description',
-        'status',
+        'status'
     ];
 
     /**

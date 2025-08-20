@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Models\Budget;
+use Illuminate\Support\Facades\Auth;
 use App\Traits\FinancialSummaryTrait;
 use Inertia\Inertia;
 
@@ -12,7 +13,7 @@ class DashboardController extends Controller
 
     public function index()
     {
-        $userId = auth()->id();
+        $userId = Auth::id();
 
         // --- Mengambil SEMUA data ringkasan yang dibutuhkan dasbor ---
         $netWorthSummary = $this->getNetWorthSummary($userId);

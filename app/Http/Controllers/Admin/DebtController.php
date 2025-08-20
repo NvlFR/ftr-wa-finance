@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Traits\FinancialSummaryTrait;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,11 +13,15 @@ class DebtController extends Controller
 
     public function index()
     {
-        $debtsData = auth()->user()->debts()
-        ->with('party')
-        ->where('status', 'belum lunas')
-        ->latest()
-        ->paginate(15);
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        /** @var array $debtsData */
+        $debtsData = Auth::user()->debts()
+            ->with('party')
+            ->where('status', 'belum lunas')
+            ->latest()
+            ->paginate(15);
 
         return Inertia::render('App/Admin/Debts/Index', [
             'debts' => $debtsData,
@@ -26,7 +31,7 @@ class DebtController extends Controller
     public function create()
     {
         return Inertia::render('App/Admin/Debts/Editor', [
-            'parties' => auth()->user()->parties()->orderBy('name')->get(),
+            'parties' => Auth::user()->parties()->orderBy('name')->get(),
         ]);
     }
 

@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Models\Party;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -11,7 +12,7 @@ class PartyController extends Controller
     public function index()
     {
         return Inertia::render('App/Admin/Parties/Index', [
-            'parties' => Party::where('user_id', auth()->id())->latest()->paginate(15),
+            'parties' => Party::where('user_id', Auth::id())->latest()->paginate(15),
         ]);
     }
 
@@ -35,7 +36,7 @@ class PartyController extends Controller
 
     public function edit(Party $party)
     {
-        if ($party->user_id !== auth()->id()) {
+        if ($party->user_id !== Auth::id()) {
             abort(403);
         }
 
@@ -44,7 +45,7 @@ class PartyController extends Controller
 
     public function update(Request $request, Party $party)
     {
-        if ($party->user_id !== auth()->id()) {
+        if ($party->user_id !== Auth::id()) {
             abort(403);
         }
 
@@ -61,7 +62,7 @@ class PartyController extends Controller
 
     public function destroy(Party $party)
     {
-        if ($party->user_id !== auth()->id()) {
+        if ($party->user_id !== Auth::id()) {
             abort(403);
         }
 

@@ -12,7 +12,13 @@ class RecurringTransaction extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_phone', 'type', 'amount', 'description',
-        'category', 'day_of_month', 'is_active',
+        'user_id',
+        'user_phone',
+        'type',
+        'amount',
+        'description',
+        'category',
+        'day_of_month',
+        'is_active',
     ];
 }

@@ -12,6 +12,7 @@ class InvestmentTransaction extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'user_phone',
         'type',
         'asset_name',

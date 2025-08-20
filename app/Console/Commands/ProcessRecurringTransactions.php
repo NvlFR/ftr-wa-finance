@@ -44,6 +44,7 @@ class ProcessRecurringTransactions extends Command
         foreach ($tasks as $task) {
             // Buat transaksi baru di tabel transactions
             Transaction::create([
+                'user_id' => $task->user_id,
                 'user_phone' => $task->user_phone,
                 'type' => $task->type,
                 'amount' => $task->amount,

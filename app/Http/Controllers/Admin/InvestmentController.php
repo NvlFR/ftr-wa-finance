@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Models\InvestmentTransaction;
 use App\Traits\FinancialSummaryTrait;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -13,7 +14,7 @@ class InvestmentController extends Controller
 
     public function index()
     {
-        $portfolio = $this->getPortfolioSummary(auth()->id());
+        $portfolio = $this->getPortfolioSummary(Auth::id());
 
         return Inertia::render('App/Admin/Investments/Index', [
             'portfolio' => $portfolio,
@@ -45,7 +46,7 @@ class InvestmentController extends Controller
 
     public function show(Request $request, $assetName)
     {
-        $userId = auth()->id();
+        $userId = Auth::id();
 
         $history = InvestmentTransaction::where('user_id', $userId)
             ->where('asset_name', $assetName)

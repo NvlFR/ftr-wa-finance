@@ -12,6 +12,7 @@ class Saving extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'user_phone',
         'goal_name',
         'target_amount',

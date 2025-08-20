@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Models\RecurringTransaction;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -11,7 +12,7 @@ class RecurringTransactionController extends Controller
     public function index()
     {
         return Inertia::render('App/Admin/RecurringTransactions/Index', [
-            'recurring_transactions' => auth()->user()->recurringTransactions()->latest()->paginate(15),
+            'recurring_transactions' => Auth::user()->recurringTransactions()->latest()->paginate(15),
         ]);
     }
 
@@ -37,7 +38,7 @@ class RecurringTransactionController extends Controller
 
     public function edit(RecurringTransaction $recurringTransaction)
     {
-        if ($recurringTransaction->user_id !== auth()->id()) {
+        if ($recurringTransaction->user_id !== Auth::id()) {
             abort(403);
         }
 
@@ -46,7 +47,7 @@ class RecurringTransactionController extends Controller
 
     public function update(Request $request, RecurringTransaction $recurringTransaction)
     {
-        if ($recurringTransaction->user_id !== auth()->id()) {
+        if ($recurringTransaction->user_id !== Auth::id()) {
             abort(403);
         }
         $validated = $request->validate([
@@ -63,7 +64,7 @@ class RecurringTransactionController extends Controller
 
     public function destroy(RecurringTransaction $recurringTransaction)
     {
-        if ($recurringTransaction->user_id !== auth()->id()) {
+        if ($recurringTransaction->user_id !== Auth::id()) {
             abort(403);
         }
         $recurringTransaction->delete();
