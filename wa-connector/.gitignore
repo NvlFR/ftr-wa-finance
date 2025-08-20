@@ -1,0 +1,5 @@
+# File: wa-connector/.gitignore
+
+node_modules
+.env
+auth_info_baileys

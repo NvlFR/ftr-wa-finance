@@ -46,7 +46,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('debts', Admin\DebtController::class);
     Route::resource('budgets', Admin\BudgetController::class);
     Route::resource('recurring-transactions', Admin\RecurringTransactionController::class);
+
+    Route::post('/profile/generate-whatsapp-code', [Admin\ProfileController::class, 'generateWhatsappLinkCode'])->name('profile.generateWhatsappLinkCode');
+    // ...
 });
 
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

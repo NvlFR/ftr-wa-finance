@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use Illuminate\Support\Str;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,5 +61,15 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    public function generateWhatsappLinkCode(Request $request)
+    {
+        $user = $request->user();
+        $code = 'FTR-WA-' . strtoupper(Str::random(6));
+        $user->whatsapp_link_code = $code;
+        $user->save();
+
+        return redirect()->route('profile.edit');
     }
 }
