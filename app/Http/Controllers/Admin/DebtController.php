@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Traits\FinancialSummaryTrait;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;

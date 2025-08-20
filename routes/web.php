@@ -1,17 +1,17 @@
 <?php
 
-use App\Http\Controllers\BudgetController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DebtController;
-use App\Http\Controllers\InvestmentController;
-use App\Http\Controllers\PartyController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\RecurringTransactionController;
-use App\Http\Controllers\SavingController;
-use App\Http\Controllers\TransactionController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+// --- Impor namespace Admin agar lebih rapi ---
+use App\Http\Controllers\Admin;
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -22,41 +22,31 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+// --- Kelompokkan SEMUA rute yang butuh login di sini ---
+Route::middleware(['auth', 'verified'])->group(function () {
 
-Route::middleware('auth', 'verified')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Rute Utama
+    Route::get('/dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
-    Route::prefix('app/admin')->as('app.admin.')->group(function () {
-        // Rute untuk Transaksi
-        Route::resource('transactions', TransactionController::class)
-            ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
+    // Rute Profil Pengguna
+    Route::get('/profile', [Admin\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [Admin\ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [Admin\ProfileController::class, 'destroy'])->name('profile.destroy');
 
-        // Rute untuk Investasi
-        Route::resource('investments', InvestmentController::class)
-            ->except(['show']); // 'show' kita definisikan secara custom
-        Route::get('/investments/{assetName}', [InvestmentController::class, 'show'])->name('investments.show');
+    // Rute Fitur Keuangan
+    Route::resource('transactions', Admin\TransactionController::class);
 
-        // Rute untuk Tabungan
-        Route::resource('savings', SavingController::class)
-            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy', 'show']);
-        Route::post('/savings/{saving}/add-funds', [SavingController::class, 'addFunds'])->name('savings.addFunds');
+    Route::resource('investments', Admin\InvestmentController::class)->except(['show']);
+    Route::get('/investments/{assetName}', [Admin\InvestmentController::class, 'show'])->name('investments.show');
 
-        // --- RUTE BARU & PEMBARUAN DI SINI ---
-        Route::resource('parties', PartyController::class);
-        Route::resource('debts', DebtController::class);
+    Route::resource('savings', Admin\SavingController::class);
+    Route::post('/savings/{saving}/add-funds', [Admin\SavingController::class, 'addFunds'])->name('savings.addFunds');
 
-        Route::resource('budgets', BudgetController::class)
-            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
-
-        Route::resource('recurring-transactions', RecurringTransactionController::class)
-            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
-    });
+    Route::resource('parties', Admin\PartyController::class);
+    Route::resource('debts', Admin\DebtController::class);
+    Route::resource('budgets', Admin\BudgetController::class);
+    Route::resource('recurring-transactions', Admin\RecurringTransactionController::class);
 });
 
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\Saving;
 use App\Models\Transaction;
 use App\Traits\FinancialSummaryTrait;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Budget;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Traits\FinancialSummaryTrait;
 use Inertia\Inertia;
