@@ -9,7 +9,6 @@
   const title = `${data.id ? 'Edit' : 'Tambah'} Investasi`
 
   const form = useForm({
-    user_phone: '',
     type: 'beli',
     asset_name: '',
     asset_type: 'saham',
@@ -42,7 +41,6 @@
         <q-form class="row" @submit.prevent="submit">
           <q-card square flat bordered class="col">
             <q-card-section class="q-pt-none">
-              <!-- <input type="hidden" name="id" v-model="form.id" /> -->
               <DateTimePicker
                 v-model="form.datetime"
                 label="Tanggal"

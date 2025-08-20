@@ -24,6 +24,7 @@
         "@quasar/extras": "^1.17.0",
         "@quasar/vite-plugin": "^1.10.0",
         "apexcharts": "^5.3.3",
+        "dayjs": "^1.11.13",
         "quasar": "^2.18.2",
         "sass": "^1.90.0",
         "vue3-apexcharts": "^1.8.0"

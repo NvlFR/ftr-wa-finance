@@ -1,13 +1,12 @@
-<script setup>
-import { computed, onMounted, reactive, ref, watch } from "vue";
+<!-- <script setup>
+import { computed, reactive, ref, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { handleDelete, handleFetchItems } from "@/helpers/client-req-handler";
 import { useQuasar } from "quasar";
-import dayjs from "dayjs";
 import { formatDateTime, formatNumber } from "@/helpers/formatter";
 import { createMonthOptions, createYearOptions } from "@/helpers/options";
 
-const title = "Biaya Operasional";
+const title = "Investasi";
 const page = usePage();
 const $q = useQuasar();
 const showFilter = ref(false);
@@ -34,44 +33,44 @@ const pagination = ref({
   page: 1,
   rowsPerPage: 10,
   rowsNumber: 10,
-  sortBy: "datetime",
+  sortBy: "transaction_date",
   descending: true,
 });
 
 const columns = [
   {
-    name: "datetime",
-    label: "Tanggal & Waktu",
-    field: "datetime",
+    name: "transaction_date",
+    label: "Tanggal Transaksi",
+    field: "transaction_date",
     align: "left",
     sortable: true,
   },
   {
-    name: "category",
-    label: "Kategori",
-    field: (row) => row.category?.name,
+    name: "asset_name",
+    label: "Nama Aset",
+    field: "asset_name",
     align: "left",
     sortable: false,
   },
   {
-    name: "description",
-    label: "Deskripsi",
-    field: "description",
+    name: "asset_type",
+    label: "Tipe Aset",
+    field: "asset_type",
     align: "right",
     sortable: true,
   },
 
   {
-    name: "amount",
-    label: "Jumlah (Rp.)",
-    field: "amount",
+    name: "quantity",
+    label: "Jumlah Unit",
+    field: "quantity",
     align: "right",
     sortable: true,
   },
   {
-    name: "notes",
-    label: "Catatan",
-    field: "notes",
+    name: "Price Per Unit",
+    label: "Harga per Unit",
+    field: "Price Per Unit",
     align: "right",
     sortable: true,
   },
@@ -81,15 +80,46 @@ const columns = [
     align: "right",
   },
 ];
+const formatDecimal = (value) => {
+    return parseFloat(value).toLocaleString("id-ID", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 8,
+    });
+};
 
-const categories = ref([
-  { value: "all", label: "Semua Kategori" },
-  ...(page.props.categories || []).map((c) => ({ label: c.name, value: c.id })),
-]);
-
-onMounted(() => {
-  fetchItems();
+const totalCapital = computed(() => {
+    return props.portfolio.reduce(
+        (sum, asset) => sum + parseFloat(asset.total_capital),
+        0
+    );
 });
+
+const getEmoji = (asset_type) => {
+    switch (asset_type.toLowerCase()) {
+        case "crypto":
+            return "💎";
+        case "saham":
+            return "📈";
+        case "emas":
+            return "🪙";
+        case "reksadana":
+            return "📄";
+        default:
+            return "💰";
+    }
+};
+
+const viewDetails = (asset) => {
+        router.get(route('investments.show', asset.asset_name));
+    };
+// const categories = ref([
+//   { value: "all", label: "Semua Kategori" },
+//   ...(page.props.categories || []).map((c) => ({ label: c.name, value: c.id })),
+// ]);
+
+// onMounted(() => {
+//   fetchItems();
+// });
 
 const deleteItem = (row) =>
   handleDelete({
@@ -101,16 +131,16 @@ const deleteItem = (row) =>
     loading,
   });
 
-const fetchItems = (props = null) => {
-  handleFetchItems({
-    pagination,
-    filter,
-    props,
-    rows,
-    url: route("app.cost.data"),
-    loading,
-  });
-};
+// const fetchItems = (props = null) => {
+//   handleFetchItems({
+//     pagination,
+//     filter,
+//     props,
+//     rows,
+//     url: route("app.cost.data"),
+//     loading,
+//   });
+//};
 
 const onFilterChange = () => {
   fetchItems();
@@ -121,7 +151,7 @@ const onRowClicked = (row) =>
 const computedColumns = computed(() => {
   if ($q.screen.gt.sm) return columns;
   return columns.filter(
-    (col) => col.name === "datetime" || col.name === "action"
+    (col) => col.name === "transaction_date" || col.name === "action"
   );
 });
 
@@ -137,14 +167,14 @@ watch(
 
 <template>
   <i-head :title="title" />
-  <authenticated-layout>
+  <AuthenticatedLayout>
     <template #title>{{ title }}</template>
     <template #right-button>
       <q-btn
         icon="add"
         dense
         color="primary"
-        @click="router.get(route('app.cost.add'))"
+        @click="router.get(route('app.admin.investments.add'))"
       />
       <q-btn
         class="q-ml-sm"
@@ -340,5 +370,137 @@ watch(
         </template>
       </q-table>
     </div>
-  </authenticated-layout>
+  </AuthenticatedLayout>
+</template> -->
+
+
+
+<script setup>
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { Head, Link, router } from "@inertiajs/vue3";
+import { computed } from "vue";
+
+const props = defineProps({
+    portfolio: Array,
+});
+
+// Fungsi untuk memformat angka menjadi format Rupiah
+const formatCurrency = (value) => {
+    return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+    }).format(value);
+};
+
+// Fungsi untuk memformat angka desimal (untuk crypto, dll)
+const formatDecimal = (value) => {
+    return parseFloat(value).toLocaleString("id-ID", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 8,
+    });
+};
+
+// Hitung total semua modal investasi
+const totalCapital = computed(() => {
+    return props.portfolio.reduce(
+        (sum, asset) => sum + parseFloat(asset.total_capital),
+        0
+    );
+});
+
+const getEmoji = (asset_type) => {
+    switch (asset_type.toLowerCase()) {
+        case "crypto":
+            return "💎";
+        case "saham":
+            return "📈";
+        case "emas":
+            return "🪙";
+        case "reksadana":
+            return "📄";
+        default:
+            return "💰";
+    }
+};
+
+const viewDetails = (asset) => {
+        router.get(route('investments.show', asset.asset_name));
+    };
+</script>
+
+<template>
+    <Head title="Portofolio Investasi" />
+
+    <AuthenticatedLayout>
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                Portofolio Investasi
+            </h2>
+        </template>
+
+        <q-page class="q-pa-md">
+            <q-card class="bg-secondary text-white q-mb-md">
+                <q-card-section>
+                    <div class="text-caption">Total Modal Terinvestasi</div>
+                    <div class="text-h5 text-weight-bold">
+                        {{ formatCurrency(totalCapital) }}
+                    </div>
+                </q-card-section>
+            </q-card>
+            <q-card class="bg-secondary text-white q-mb-md"> </q-card>
+
+            <div class="q-mb-md">
+                <Link :href="route('investments.create')">
+                    <q-btn
+                        color="primary"
+                        icon="add_chart"
+                        label="Catat Transaksi Investasi"
+                    />
+                </Link>
+            </div>
+
+
+            <div v-if="portfolio.length > 0" class="row q-col-gutter-md">
+                <div
+                    v-for="asset in portfolio"
+                    :key="asset.asset_name"
+                    class="col-12 col-sm-6 col-md-4"
+                >
+                    <q-card class="cursor-pointer" @click="viewDetails(asset)">
+                        <q-card-section>
+                            <div class="text-h6">
+                                {{ getEmoji(asset.asset_type) }}
+                                {{ asset.asset_name }}
+                            </div>
+                            <div class="text-caption text-grey">
+                                {{ asset.asset_type }}
+                            </div>
+                        </q-card-section>
+                        <q-separator />
+                        <q-card-section class="row">
+                            <div class="col">
+                                <div class="text-caption">Jumlah</div>
+                                <div>
+                                    {{
+                                        formatDecimal(asset.total_quantity)
+                                    }}
+                                    unit
+                                </div>
+                            </div>
+                            <div class="col text-right">
+                                <div class="text-caption">Modal</div>
+                                <div class="text-weight-medium">
+                                    {{ formatCurrency(asset.total_capital) }}
+                                </div>
+                            </div>
+                        </q-card-section>
+                    </q-card>
+                </div>
+            </div>
+            <div v-else class="text-center text-grey q-mt-xl">
+                <q-icon name="trending_down" size="xl" />
+                <p class="q-mt-md">Anda belum memiliki aset investasi.</p>
+            </div>
+        </q-page>
+    </AuthenticatedLayout>
 </template>
