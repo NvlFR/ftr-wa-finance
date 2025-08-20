@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class () extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -12,10 +13,12 @@ return new class () extends Migration {
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->string('user_phone'); // Nomor WA pengirim
-            $table->enum('type', ['pemasukan', 'pengeluaran']); // Untuk MVP, kita hanya handle 2 tipe ini
-            $table->decimal('amount', 15, 2); // Jumlah uang
-            $table->string('description'); // Keterangan transaksi
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('user_phone')->nullable();
+            $table->enum('type', ['pemasukan', 'pengeluaran']);
+            $table->decimal('amount', 15, 2);
+            $table->string('description');
+            $table->string('category')->nullable();
             $table->timestamps();
         });
     }

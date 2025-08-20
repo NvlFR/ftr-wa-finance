@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class () extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -12,7 +13,8 @@ return new class () extends Migration {
     {
         Schema::create('investment_transactions', function (Blueprint $table) {
             $table->id();
-            $table->string('user_phone');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('user_phone')->nullable();
             $table->enum('type', ['beli', 'jual']);
             $table->string('asset_name');
             $table->string('asset_type');
@@ -22,7 +24,7 @@ return new class () extends Migration {
             $table->timestamp('transaction_date')->useCurrent();
             $table->timestamps();
         });
-    }
+    }   
 
     /**
      * Reverse the migrations.
