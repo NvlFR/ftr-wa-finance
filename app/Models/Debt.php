@@ -21,7 +21,7 @@ class Debt extends Model
         'type',
         'amount',
         'description',
-        'status'
+        'status',
     ];
 
     /**

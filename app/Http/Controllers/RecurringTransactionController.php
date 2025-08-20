@@ -10,14 +10,14 @@ class RecurringTransactionController extends Controller
 {
     public function index()
     {
-        return Inertia::render('RecurringTransactions/Index', [
-            'recurring_transactions' => auth()->user()->recurringTransactions()->latest()->paginate(15)
+        return Inertia::render('App/Admin/RecurringTransactions/Index', [
+            'recurring_transactions' => auth()->user()->recurringTransactions()->latest()->paginate(15),
         ]);
     }
 
     public function create()
     {
-        return Inertia::render('RecurringTransactions/Create');
+        return Inertia::render('App/Admin/RecurringTransactions/Editor');
     }
 
     public function store(Request $request)
@@ -32,7 +32,7 @@ class RecurringTransactionController extends Controller
 
         $request->user()->recurringTransactions()->create($validated);
 
-        return redirect()->route('recurring-transactions.index')->with('success', 'Transaksi berulang berhasil ditambahkan.');
+        return redirect()->route('app.admin.recurring-transactions.index')->with('success', 'Transaksi berulang berhasil ditambahkan.');
     }
 
     public function edit(RecurringTransaction $recurringTransaction)
@@ -40,7 +40,8 @@ class RecurringTransactionController extends Controller
         if ($recurringTransaction->user_id !== auth()->id()) {
             abort(403);
         }
-        return Inertia::render('RecurringTransactions/Edit', ['recurring_transaction' => $recurringTransaction]);
+
+        return Inertia::render('App/Admin/RecurringTransactions/Editor', ['recurring_transaction' => $recurringTransaction]);
     }
 
     public function update(Request $request, RecurringTransaction $recurringTransaction)
@@ -56,7 +57,8 @@ class RecurringTransactionController extends Controller
             'day_of_month' => 'required|integer|min:1|max:31',
         ]);
         $recurringTransaction->update($validated);
-        return redirect()->route('recurring-transactions.index')->with('success', 'Transaksi berulang berhasil diperbarui.');
+
+        return redirect()->route('app.recurring-transactions.index')->with('success', 'Transaksi berulang berhasil diperbarui.');
     }
 
     public function destroy(RecurringTransaction $recurringTransaction)
@@ -65,6 +67,7 @@ class RecurringTransactionController extends Controller
             abort(403);
         }
         $recurringTransaction->delete();
-        return redirect()->route('recurring-transactions.index')->with('success', 'Transaksi berulang berhasil dihapus.');
+
+        return redirect()->route('app.admin.recurring-transactions.index')->with('success', 'Transaksi berulang berhasil dihapus.');
     }
 }

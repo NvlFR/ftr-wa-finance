@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Traits\FinancialSummaryTrait;
 use App\Models\InvestmentTransaction;
+use App\Traits\FinancialSummaryTrait;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,17 +15,16 @@ class InvestmentController extends Controller
     {
         $portfolio = $this->getPortfolioSummary(auth()->id());
 
-        return Inertia::render('Investments/Index', [
-            'portfolio' => $portfolio
+        return Inertia::render('App/Admin/Investments/Index', [
+            'portfolio' => $portfolio,
         ]);
     }
 
-     public function create()
+    public function create()
     {
-        return Inertia::render('Investments/Create');
+        return Inertia::render('App/Admin/Investments/Editor');
     }
 
-    // --- TAMBAHKAN METODE BARU INI ---
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -41,31 +40,28 @@ class InvestmentController extends Controller
 
         $request->user()->investmentTransactions()->create($validated);
 
-        return redirect()->route('investments.index')->with('success', 'Transaksi investasi berhasil dicatat.');
+        return redirect()->route('app.admin.investments.index')->with('success', 'Transaksi investasi berhasil dicatat.');
     }
 
     public function show(Request $request, $assetName)
-{
-    $userId = auth()->id();
+    {
+        $userId = auth()->id();
 
-    // Ambil semua transaksi untuk aset spesifik ini
-    $history = InvestmentTransaction::where('user_id', $userId)
-        ->where('asset_name', $assetName)
-        ->latest('transaction_date')
-        ->paginate(15);
+        $history = InvestmentTransaction::where('user_id', $userId)
+            ->where('asset_name', $assetName)
+            ->latest('transaction_date')
+            ->paginate(15);
 
-    // Jika tidak ada histori, kemungkinan pengguna mencoba URL yang salah
-    if ($history->isEmpty()) {
-        abort(404);
+        if ($history->isEmpty()) {
+            abort(404);
+        }
+
+        $portfolioSummary = $this->getPortfolioSummary($userId);
+        $assetSummary = $portfolioSummary->firstWhere('asset_name', $assetName);
+
+        return Inertia::render('App/Admin/Investments/Detail', [
+            'asset' => $assetSummary,
+            'history' => $history,
+        ]);
     }
-
-    // Ambil data ringkasan untuk aset ini menggunakan Trait
-    $portfolioSummary = $this->getPortfolioSummary($userId);
-    $assetSummary = $portfolioSummary->firstWhere('asset_name', $assetName);
-
-    return Inertia::render('Investments/Show', [
-        'asset' => $assetSummary,
-        'history' => $history,
-    ]);
-}
 }

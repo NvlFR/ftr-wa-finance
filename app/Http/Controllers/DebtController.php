@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Debt;
-use App\Models\Party; 
 use App\Traits\FinancialSummaryTrait;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,16 +18,15 @@ class DebtController extends Controller
         ->latest()
         ->paginate(15);
 
-        return Inertia::render('Debts/Index', [
+        return Inertia::render('App/Admin/Debts/Index', [
             'debts' => $debtsData,
         ]);
     }
 
     public function create()
     {
-        return Inertia::render('Debts/Create', [
-            // Kirim daftar pihak ke form untuk pilihan dropdown
-            'parties' => auth()->user()->parties()->orderBy('name')->get()
+        return Inertia::render('App/Admin/Debts/Editor', [
+            'parties' => auth()->user()->parties()->orderBy('name')->get(),
         ]);
     }
 
@@ -44,7 +41,7 @@ class DebtController extends Controller
 
         $request->user()->debts()->create($validated);
 
-        return redirect()->route('debts.index')->with('success', 'Catatan hutang/piutang berhasil ditambahkan.');
+        return redirect()->route('app.admin.debts.index')->with('success', 'Catatan hutang/piutang berhasil ditambahkan.');
     }
 
     // Metode edit, update, destroy bisa ditambahkan nanti dengan pola yang sama

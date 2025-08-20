@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\RecurringTransaction;
+use App\Models\Transaction; // <-- TAMBAHKAN INI
 use Illuminate\Console\Command;
-use App\Models\RecurringTransaction; // <-- TAMBAHKAN INI
-use App\Models\Transaction;
 
 class ProcessRecurringTransactions extends Command
 {
@@ -28,30 +28,31 @@ class ProcessRecurringTransactions extends Command
     public function handle()
     {
         //
-         $today = now()->day;
-    $this->info("Mengecek transaksi berulang untuk tanggal: {$today}...");
+        $today = now()->day;
+        $this->info("Mengecek transaksi berulang untuk tanggal: {$today}...");
 
-    $tasks = RecurringTransaction::where('day_of_month', $today)
-        ->where('is_active', true)
-        ->get();
+        $tasks = RecurringTransaction::where('day_of_month', $today)
+            ->where('is_active', true)
+            ->get();
 
-    if ($tasks->isEmpty()) {
-        $this->info('Tidak ada transaksi berulang untuk hari ini.');
-        return;
-    }
+        if ($tasks->isEmpty()) {
+            $this->info('Tidak ada transaksi berulang untuk hari ini.');
 
-    foreach ($tasks as $task) {
-        // Buat transaksi baru di tabel transactions
-        Transaction::create([
-            'user_phone' => $task->user_phone,
-            'type' => $task->type,
-            'amount' => $task->amount,
-            'description' => $task->description . ' (Otomatis)',
-            'category' => $task->category,
-        ]);
-        $this->info("Transaksi '{$task->description}' untuk {$task->user_phone} berhasil dicatat.");
-    }
+            return;
+        }
 
-    $this->info('Semua transaksi berulang berhasil diproses.');
+        foreach ($tasks as $task) {
+            // Buat transaksi baru di tabel transactions
+            Transaction::create([
+                'user_phone' => $task->user_phone,
+                'type' => $task->type,
+                'amount' => $task->amount,
+                'description' => $task->description . ' (Otomatis)',
+                'category' => $task->category,
+            ]);
+            $this->info("Transaksi '{$task->description}' untuk {$task->user_phone} berhasil dicatat.");
+        }
+
+        $this->info('Semua transaksi berulang berhasil diproses.');
     }
 }

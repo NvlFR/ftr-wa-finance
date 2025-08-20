@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/InvestmentTransaction.php
 
 namespace App\Models;

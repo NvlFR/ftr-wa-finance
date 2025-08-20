@@ -1,11 +1,11 @@
 <?php
 
+use App\Console\Commands\CleanupOldExports;
+use App\Console\Commands\ProcessRecurringTransactions;
+use App\Console\Commands\SendDailyReport; // <-- Import facade Schedule
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schedule; // <-- Import facade Schedule
-use App\Console\Commands\SendDailyReport;
-use App\Console\Commands\ProcessRecurringTransactions;
-use App\Console\Commands\CleanupOldExports;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

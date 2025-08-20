@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/RecurringTransaction.php
 
 namespace App\Models;

@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Transaction;
-use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Api\WebhookController;
+use App\Models\Transaction;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 
 class SendDailyReport extends Command
 {
@@ -23,6 +23,7 @@ class SendDailyReport extends Command
 
         if ($users->isEmpty()) {
             $this->info('No active users today. No reports sent.');
+
             return;
         }
 

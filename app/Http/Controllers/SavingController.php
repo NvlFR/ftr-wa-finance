@@ -15,12 +15,13 @@ class SavingController extends Controller
     public function index()
     {
         $savings = $this->getSavingsSummary(auth()->id());
-        return Inertia::render('Savings/Index', ['savings' => $savings]);
+
+        return Inertia::render('App/Admin/Savings/Index', ['savings' => $savings]);
     }
 
     public function create()
     {
-        return Inertia::render('Savings/Create');
+        return Inertia::render('App/Admin/Savings/Editor');
     }
 
     public function store(Request $request)
@@ -32,7 +33,7 @@ class SavingController extends Controller
 
         $request->user()->savings()->create($validated);
 
-        return redirect()->route('savings.index')->with('success', 'Tujuan tabungan berhasil dibuat.');
+        return redirect()->route('app.admin.savings.index')->with('success', 'Tujuan tabungan berhasil dibuat.');
     }
 
     public function edit(Saving $saving)
@@ -41,7 +42,8 @@ class SavingController extends Controller
         if ($saving->user_id !== auth()->id() || $saving->is_emergency_fund) {
             abort(403); // Dana darurat tidak boleh diedit dari sini
         }
-        return Inertia::render('Savings/Edit', ['saving' => $saving]);
+
+        return Inertia::render('App/Admin/Savings/Editor', ['saving' => $saving]);
     }
 
     public function update(Request $request, Saving $saving)
@@ -55,7 +57,8 @@ class SavingController extends Controller
             'target_amount' => 'required|numeric|min:0',
         ]);
         $saving->update($validated);
-        return redirect()->route('savings.index')->with('success', 'Tujuan tabungan berhasil diperbarui.');
+
+        return redirect()->route('app.admin.savings.index')->with('success', 'Tujuan tabungan berhasil diperbarui.');
     }
 
     public function destroy(Saving $saving)
@@ -65,18 +68,17 @@ class SavingController extends Controller
             abort(403);
         }
         $saving->delete();
-        return redirect()->route('savings.index')->with('success', 'Tujuan tabungan berhasil dihapus.');
+
+        return redirect()->route('app.admin.savings.index')->with('success', 'Tujuan tabungan berhasil dihapus.');
     }
 
     public function addFunds(Request $request, Saving $saving)
     {
-        // Otorisasi
         if ($saving->user_id !== auth()->id()) {
             abort(403);
         }
         $validated = $request->validate(['amount' => 'required|numeric|min:1']);
 
-        // 1. Catat sebagai 'pengeluaran' dari dompet utama
         Transaction::create([
             'user_id' => auth()->id(),
             'type' => 'pengeluaran',
@@ -85,7 +87,6 @@ class SavingController extends Controller
             'category' => $saving->is_emergency_fund ? 'dana darurat' : 'tabungan',
         ]);
 
-        // 2. Tambah ke saldo tabungan/dana darurat
         $saving->current_amount += $validated['amount'];
         if ($saving->current_amount >= $saving->target_amount && !$saving->is_emergency_fund) {
             $saving->status = 'completed';
@@ -95,24 +96,22 @@ class SavingController extends Controller
         return redirect()->back()->with('success', 'Dana berhasil ditambahkan.');
     }
     public function show(Saving $saving)
-{
-    // Otorisasi: Pastikan user hanya bisa melihat tabungannya sendiri
-    if ($saving->user_id !== auth()->id()) {
-        abort(403);
+    {
+        if ($saving->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $history = Transaction::where('user_id', auth()->id())
+            ->where(function ($query) use ($saving) {
+                $query->where('description', 'like', "%{$saving->goal_name}%")
+                      ->orWhere('category', $saving->is_emergency_fund ? 'dana darurat' : 'tabungan');
+            })
+            ->latest()
+            ->paginate(10);
+
+        return Inertia::render('App/Admin/Savings/Detail', [
+            'saving' => $saving,
+            'history' => $history,
+        ]);
     }
-
-    // Ambil semua transaksi yang deskripsinya cocok dengan nama tujuan tabungan
-    $history = Transaction::where('user_id', auth()->id())
-        ->where(function ($query) use ($saving) {
-            $query->where('description', 'like', "%{$saving->goal_name}%")
-                  ->orWhere('category', $saving->is_emergency_fund ? 'dana darurat' : 'tabungan');
-        })
-        ->latest()
-        ->paginate(10); // Kita gunakan pagination untuk riwayat
-
-    return Inertia::render('Savings/Show', [
-        'saving' => $saving,
-        'history' => $history
-    ]);
-}
 }

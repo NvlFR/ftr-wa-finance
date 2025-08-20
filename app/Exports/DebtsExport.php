@@ -47,4 +47,4 @@ class DebtsExport implements FromCollection, WithHeadings, WithMapping
             $debt->status,
         ];
     }
-}   
+}

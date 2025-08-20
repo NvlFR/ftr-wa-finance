@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Saving.php
 
 namespace App\Models;

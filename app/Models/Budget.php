@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Budget.php
 
 namespace App\Models;

@@ -9,5 +9,8 @@ class Party extends Model
     //
     protected $fillable = ['user_id', 'name', 'type', 'notes'];
 
-    public function debts() { return $this->hasMany(Debt::class); }
+    public function debts()
+    {
+        return $this->hasMany(Debt::class);
+    }
 }

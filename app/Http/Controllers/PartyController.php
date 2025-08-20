@@ -10,14 +10,14 @@ class PartyController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Parties/Index', [
-            'parties' => Party::where('user_id', auth()->id())->latest()->paginate(15)
+        return Inertia::render('App/Admin/Parties/Index', [
+            'parties' => Party::where('user_id', auth()->id())->latest()->paginate(15),
         ]);
     }
 
     public function create()
     {
-        return Inertia::render('Parties/Create');
+        return Inertia::render('App/Admin/Parties/Editor');
     }
 
     public function store(Request $request)
@@ -30,7 +30,7 @@ class PartyController extends Controller
 
         $request->user()->parties()->create($validated);
 
-        return redirect()->route('parties.index')->with('success', 'Pihak baru berhasil ditambahkan.');
+        return redirect()->route('app.admin.parties.index')->with('success', 'Pihak baru berhasil ditambahkan.');
     }
 
     public function edit(Party $party)
@@ -38,7 +38,8 @@ class PartyController extends Controller
         if ($party->user_id !== auth()->id()) {
             abort(403);
         }
-        return Inertia::render('Parties/Edit', ['party' => $party]);
+
+        return Inertia::render('App/Admin/Parties/Editor', ['party' => $party]);
     }
 
     public function update(Request $request, Party $party)
@@ -55,7 +56,7 @@ class PartyController extends Controller
 
         $party->update($validated);
 
-        return redirect()->route('parties.index')->with('success', 'Data pihak berhasil diperbarui.');
+        return redirect()->route('app.admin.parties.index')->with('success', 'Data pihak berhasil diperbarui.');
     }
 
     public function destroy(Party $party)
@@ -66,6 +67,6 @@ class PartyController extends Controller
 
         $party->delete();
 
-        return redirect()->route('parties.index')->with('success', 'Data pihak berhasil dihapus.');
+        return redirect()->route('app.admin.parties.index')->with('success', 'Data pihak berhasil dihapus.');
     }
 }

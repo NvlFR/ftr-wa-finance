@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Budget;
-use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -11,32 +10,32 @@ use Inertia\Inertia;
 class BudgetController extends Controller
 {
     public function index()
-{
-    $currentMonth = now()->month;
-    $currentYear = now()->year;
+    {
+        $currentMonth = now()->month;
+        $currentYear = now()->year;
 
-    $budgets = auth()->user()->budgets()
-        ->where('month', $currentMonth)
-        ->where('year', $currentYear)
-        ->get();
+        $budgets = auth()->user()->budgets()
+            ->where('month', $currentMonth)
+            ->where('year', $currentYear)
+            ->get();
 
-    $spendings = auth()->user()->transactions()
-        ->where('type', 'pengeluaran')
-        ->whereMonth('created_at', $currentMonth)
-        ->whereYear('created_at', $currentYear)
-        ->select('category', DB::raw('SUM(amount) as total_spent'))
-        ->groupBy('category')
-        ->pluck('total_spent', 'category');
+        $spendings = auth()->user()->transactions()
+            ->where('type', 'pengeluaran')
+            ->whereMonth('created_at', $currentMonth)
+            ->whereYear('created_at', $currentYear)
+            ->select('category', DB::raw('SUM(amount) as total_spent'))
+            ->groupBy('category')
+            ->pluck('total_spent', 'category');
 
-    return Inertia::render('Budgets/Index', [
-        'budgets' => $budgets,
-        'spendings' => $spendings,
-    ]);
-}
+        return Inertia::render('App/Admin/Budgets/Index', [
+            'budgets' => $budgets,
+            'spendings' => $spendings,
+        ]);
+    }
 
     public function create()
     {
-        return Inertia::render('Budgets/Create');
+        return Inertia::render('App/Admin/Budgets/Editor');
     }
 
     public function store(Request $request)
@@ -56,7 +55,7 @@ class BudgetController extends Controller
             ['amount' => $validated['amount']]
         );
 
-        return redirect()->route('budgets.index')->with('success', 'Budget berhasil disimpan.');
+        return redirect()->route('app.admin.budgets.index')->with('success', 'Budget berhasil disimpan.');
     }
 
     public function edit(Budget $budget)
@@ -64,7 +63,8 @@ class BudgetController extends Controller
         if ($budget->user_id !== auth()->id()) {
             abort(403);
         }
-        return Inertia::render('Budgets/Edit', ['budget' => $budget]);
+
+        return Inertia::render('App/Admin/Budgets/Editor', ['budget' => $budget]);
     }
 
     public function update(Request $request, Budget $budget)
@@ -78,10 +78,9 @@ class BudgetController extends Controller
             'amount' => 'required|integer|min:0',
         ]);
 
-        // Di sini kita update, bukan updateOrCreate
         $budget->update($validated);
 
-        return redirect()->route('budgets.index')->with('success', 'Budget berhasil diperbarui.');
+        return redirect()->route('app.admin.budgets.index')->with('success', 'Budget berhasil diperbarui.');
     }
 
     public function destroy(Budget $budget)
@@ -90,6 +89,7 @@ class BudgetController extends Controller
             abort(403);
         }
         $budget->delete();
-        return redirect()->route('budgets.index')->with('success', 'Budget berhasil dihapus.');
+
+        return redirect()->route('app.admin.budgets.index')->with('success', 'Budget berhasil dihapus.');
     }
 }

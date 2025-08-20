@@ -5,6 +5,9 @@
 .env.production
 .phpactor.json
 .phpunit.result.cache
+.php-cs-fixer.cache
+.php-cs-fixer.php
+.prettierrc
 /.fleet
 /.idea
 /.nova
