@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\InvestmentTransaction;
 use App\Traits\FinancialSummaryTrait;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Request as FacadeRequest;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,6 +21,28 @@ class InvestmentController extends Controller
         return Inertia::render('App/Admin/Investments/Index', [
             'portfolio' => $portfolio,
         ]);
+    }
+
+    public function data()
+    {
+        $query = auth()->user()->investmentTransactions()
+            ->when(FacadeRequest::input('search'), function ($query, $search) {
+                $query->where('asset_name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            })
+            ->when(FacadeRequest::input('month'), function ($query, $month) {
+                $query->whereMonth('transaction_date', $month);
+            })
+            ->when(FacadeRequest::input('year'), function ($query, $year) {
+                $query->whereYear('transaction_date', $year);
+            });
+
+        $sort = FacadeRequest::input('sort') ?? 'transaction_date';
+        $order = FacadeRequest::input('order') ?? 'desc';
+
+        $transactions = $query->orderBy($sort, $order)->paginate(FacadeRequest::input('limit', 10));
+
+        return $transactions;
     }
 
     public function create()
@@ -45,25 +68,14 @@ class InvestmentController extends Controller
         return redirect()->route('app.admin.investments.index')->with('success', 'Transaksi investasi berhasil dicatat.');
     }
 
-    public function show(Request $request, $assetName)
+    public function show(InvestmentTransaction $investment)
     {
-        $userId = Auth::id();
-
-        $history = InvestmentTransaction::where('user_id', $userId)
-            ->where('asset_name', $assetName)
-            ->latest('transaction_date')
-            ->paginate(15);
-
-        if ($history->isEmpty()) {
-            abort(404);
+        if ($investment->user_id !== auth()->id()) {
+            abort(403);
         }
 
-        $portfolioSummary = $this->getPortfolioSummary($userId);
-        $assetSummary = $portfolioSummary->firstWhere('asset_name', $assetName);
-
         return Inertia::render('App/Admin/Investments/Detail', [
-            'asset' => $assetSummary,
-            'history' => $history,
+            'investment' => $investment
         ]);
     }
 }

@@ -36,8 +36,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Rute Fitur Keuangan
     Route::resource('transactions', Admin\TransactionController::class);
 
-    Route::resource('investments', Admin\InvestmentController::class)->except(['show']);
-    Route::get('/investments/{assetName}', [Admin\InvestmentController::class, 'show'])->name('investments.show');
+    // routes/web.php
+    Route::resource('investments', Admin\InvestmentController::class);
+    Route::get('/investments-data', [Admin\InvestmentController::class, 'data'])->name('investments.data');
 
     Route::resource('savings', Admin\SavingController::class);
     Route::post('/savings/{saving}/add-funds', [Admin\SavingController::class, 'addFunds'])->name('savings.addFunds');
